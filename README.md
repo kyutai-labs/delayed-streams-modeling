@@ -57,7 +57,6 @@ python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --te
 If you have `uv` installed, you can skip the installation step and run directly:
 ```bash
 uvx --with moshi-mlx python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
-
 ```
 It will install the moshi package in a temporary environment and run the speech-to-text.
 
