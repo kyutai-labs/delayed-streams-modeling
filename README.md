@@ -15,6 +15,12 @@ transcribed into text. We provide two such models:
 
 More details can be found on the [project page](https://kyutai.org/next/stt).
 
+You can retrieve the sample files used in the following snippets via:
+```bash
+wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
+wget https://github.com/kyutai-labs/moshi/raw/refs/heads/main/data/sample_fr_hibiki_crepes.mp3
+```
+
 ### PyTorch implementation
 <a href="https://huggingface.co/kyutai/stt-2.6b-en" target="_blank" style="margin: 2px;">
     <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue" style="display: inline-block; vertical-align: middle;"/>
@@ -27,7 +33,6 @@ This requires the [moshi package](https://pypi.org/project/moshi/)
 with version 0.2.5 or later, which can be installed via pip.
 
 ```bash
-# wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
 python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
 ```
 
@@ -46,7 +51,6 @@ This requires the [moshi-mlx package](https://pypi.org/project/moshi-mlx/)
 with version 0.2.5 or later, which can be installed via pip.
 
 ```bash
-# wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
 python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
 ```
 
@@ -97,7 +101,6 @@ moshi-server worker --config configs/config-stt-hf.toml
 Once the server has started you can run a streaming inference with the following
 script.
 ```bash
-# wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
 uv run scripts/asr-streaming-query.py bria.mp3
 ```
 
