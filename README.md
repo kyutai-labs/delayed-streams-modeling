@@ -104,8 +104,9 @@ script.
 uv run scripts/asr-streaming-query.py bria.mp3
 ```
 
-The script simulates some real-time processing of the audio. Faster processing
-can be triggered by setting the real-time factor, e.g. `--rtf 500` will process
+The script limits the decoding speed to simulates real-time processing of the audio. 
+Faster processing can be triggered by setting 
+the real-time factor, e.g. `--rtf 500` will process
 the data as fast as possible.
 
 ## Text-to-Speech
