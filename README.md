@@ -1,19 +1,28 @@
 # Delayed Streams Modeling
 
-This repo contains instructions and examples of how to run
-Kyutai Speech-To-Text models.
+This repo contains instructions and examples of how to run Kyutai Speech-To-Text models.
 These models are powered by delayed streams modeling (DSM),
 a flexible formulation for streaming, multimodal sequence-to-sequence learning.
 Text-to-speech models based on DSM coming soon!
 
 ## Kyutai Speech-To-Text
 
+**More details can be found on the [project page](https://kyutai.org/next/stt).**
+
 Kyutai STT models are optimized for real-time usage, can be batched for efficiency, and return word level timestamps.
 We provide two models:
 - `kyutai/stt-1b-en_fr`, an English and French model with ~1B parameters, a 0.5 second delay, and a [semantic VAD](https://kyutai.org/next/stt#semantic-vad).
 - `kyutai/stt-2.6b-en`, an English-only model with ~2.6B parameters and a 2.5 second delay.
 
-**More details can be found on the [project page](https://kyutai.org/next/stt).**
+These speech-to-text models have several advantages:
+- Streaming inference: the models can process audio in chunks, which allows
+  for real-time transcription, and is great for interactive applications.
+- Easy batching for maximum efficiency: a H100 can process 400 streams in
+  real-time.
+- They return word-level timestamps.
+- The 1B model has a semantic Voice Activity Detection (VAD) component that
+  can be used to detect when the user is speaking. This is especially useful
+  for building voice agents.
 
 You can retrieve the sample files used in the following snippets via:
 ```bash
@@ -35,6 +44,12 @@ with version 0.2.5 or later, which can be installed via pip.
 ```bash
 python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
 ```
+
+If you have `uv` installed, you can skip the installation step and run directly:
+```bash
+uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
+```
+It will install the moshi package in a temporary environment and run the speech-to-text.
 
 ### Rust server
 <a href="https://huggingface.co/kyutai/stt-2.6b-en-candle" target="_blank" style="margin: 2px;">
@@ -70,8 +85,9 @@ script.
 uv run scripts/asr-streaming-query.py bria.mp3
 ```
 
-The script simulates some real-time processing of the audio. Faster processing
-can be triggered by setting the real-time factor, e.g. `--rtf 500` will process
+The script limits the decoding speed to simulates real-time processing of the audio. 
+Faster processing can be triggered by setting 
+the real-time factor, e.g. `--rtf 500` will process
 the data as fast as possible.
 
 ### Rust standalone
@@ -100,6 +116,12 @@ with version 0.2.5 or later, which can be installed via pip.
 ```bash
 python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
 ```
+
+If you have `uv` installed, you can skip the installation step and run directly:
+```bash
+uvx --with moshi-mlx python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
+```
+It will install the moshi package in a temporary environment and run the speech-to-text.
 
 ## Text-to-Speech
 
