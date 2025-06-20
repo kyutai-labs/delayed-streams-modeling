@@ -60,6 +60,22 @@ uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria
 ```
 It will install the moshi package in a temporary environment and run the speech-to-text.
 
+Additionally, in the Moshi [repository](https://github.com/kyutai-labs/moshi/tree/main/scripts), we also provide two scripts that highlight different usage scenarios. The first script illustrates how to extract word-level timestamps from the model's outputs:
+
+```bash
+uv run scripts/streaming_stt_timestamps.py \
+  --hf-repo kyutai/stt-2.6b-en \
+  --file bria.mp3
+```
+
+The second script can be used to run a model on an existing Hugging Face dataset and calculate its performance metrics: 
+```bash
+uv run scripts/streaming_stt.py \
+    --dataset meanwhile \
+    --hf-repo kyutai/stt-2.6b-en  \
+    --hf-cache-dir /home/user/huggingface_cache
+```
+
 ### Rust server
 <a href="https://huggingface.co/kyutai/stt-2.6b-en-candle" target="_blank" style="margin: 2px;">
     <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue" style="display: inline-block; vertical-align: middle;"/>
