@@ -100,6 +100,7 @@ async def stream_audio(url: str, api_key: str, rtf: float):
     """Stream audio data to a WebSocket server."""
     headers = {"kyutai-api-key": api_key}
 
+    # Instead of using the header, you can authenticate by adding `?auth_id={api_key}` to the URL
     async with websockets.connect(url, additional_headers=headers) as websocket:
         send_task = asyncio.create_task(send_messages(websocket, rtf))
         receive_task = asyncio.create_task(receive_messages(websocket))
@@ -117,7 +118,12 @@ if __name__ == "__main__":
         default="ws://127.0.0.1:8080",
     )
     parser.add_argument("--api-key", default="public_token")
-    parser.add_argument("--rtf", type=float, default=1.01)
+    parser.add_argument(
+        "--rtf",
+        type=float,
+        default=1.01,
+        help="The real-time factor of how fast to feed in the audio.",
+    )
     args = parser.parse_args()
 
     url = f"{args.url}/api/asr-streaming"

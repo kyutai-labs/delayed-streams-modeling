@@ -19,7 +19,6 @@ import websockets
 # Desired audio properties
 TARGET_SAMPLE_RATE = 24000
 TARGET_CHANNELS = 1  # Mono
-audio_queue = asyncio.Queue()
 
 
 async def receive_messages(websocket):
@@ -33,7 +32,7 @@ async def receive_messages(websocket):
         print("Connection closed while receiving messages.")
 
 
-async def send_messages(websocket):
+async def send_messages(websocket, audio_queue):
     """Send audio data from microphone to WebSocket server."""
     try:
         # Start by draining the queue to avoid lags
@@ -53,6 +52,7 @@ async def stream_audio(url: str, api_key: str):
     """Stream audio data to a WebSocket server."""
     print("Starting microphone recording...")
     print("Press Ctrl+C to stop recording")
+    audio_queue = asyncio.Queue()
 
     loop = asyncio.get_event_loop()
 
@@ -70,8 +70,9 @@ async def stream_audio(url: str, api_key: str):
         blocksize=1920,  # 80ms blocks
     ):
         headers = {"kyutai-api-key": api_key}
+        # Instead of using the header, you can authenticate by adding `?auth_id={api_key}` to the URL
         async with websockets.connect(url, additional_headers=headers) as websocket:
-            send_task = asyncio.create_task(send_messages(websocket))
+            send_task = asyncio.create_task(send_messages(websocket, audio_queue))
             receive_task = asyncio.create_task(receive_messages(websocket))
             await asyncio.gather(send_task, receive_task)
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
         help="The URL of the server to which to send the audio",
         default="ws://127.0.0.1:8080",
     )
-    parser.add_argument("--api-key", default="open_token")
+    parser.add_argument("--api-key", default="public_token")
     parser.add_argument(
         "--list-devices", action="store_true", help="List available audio devices"
     )
