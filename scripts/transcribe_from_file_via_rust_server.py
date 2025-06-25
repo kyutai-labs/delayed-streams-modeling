@@ -17,7 +17,6 @@ import sphn
 import websockets
 
 SAMPLE_RATE = 24000
-TARGET_CHANNELS = 1  # Mono
 FRAME_SIZE = 1920  # Send data in chunks
 HEADERS = {"kyutai-api-key": "open_token"}
 
