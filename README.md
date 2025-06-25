@@ -33,6 +33,21 @@ These speech-to-text models have several advantages:
   can be used to detect when the user is speaking. This is especially useful
   for building voice agents.
 
+### Implementations overview
+
+We provide different implementations of Kyutai STT for different use cases.
+Here is how to choose which one to use:
+
+- **PyTorch: for research and tinkering.**
+  If you want to call the model from Python for research or experimentation, use our PyTorch implementation.
+- **Rust: for production.**
+  If you want to serve Kyutai STT in a production setting, use our Rust server.
+  Our robust Rust server provides streaming access to the model over websockets.
+  We use this server to run [Unmute](https://unmute.sh/); on a L40S GPU, we can serve 64 simultaneous connections at a real-time factor of 3x.
+- **MLX: for on-device inference on iPhone and Mac.**
+  MLX is Apple's ML framework that allows you to use hardware acceleration on Apple silicon.
+  If you want to run the model on a Mac or an iPhone, choose the MLX implementation.
+
 You can retrieve the sample files used in the following snippets via:
 ```bash
 wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
@@ -62,25 +77,25 @@ If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the install
 ```bash
 uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
 ```
-It will install the moshi package in a temporary environment and run the speech-to-text.
 
 Additionally, we provide two scripts that highlight different usage scenarios. The first script illustrates how to extract word-level timestamps from the model's outputs:
 
 ```bash
 uv run \
-  scripts/streaming_stt_timestamps.py \
+  scripts/transcribe_from_file_via_pytorch.py \
   --hf-repo kyutai/stt-2.6b-en \
   --file bria.mp3
 ```
 
 The second script can be used to run a model on an existing Hugging Face dataset and calculate its performance metrics: 
 ```bash
-uv run scripts/streaming_stt.py  \
+uv run scripts/evaluate_on_dataset.py  \
   --dataset meanwhile  \
   --hf-repo kyutai/stt-2.6b-en
 ```
 
 ### Rust server
+
 <a href="https://huggingface.co/kyutai/stt-2.6b-en-candle" target="_blank" style="margin: 2px;">
     <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue" style="display: inline-block; vertical-align: middle;"/>
 </a>
@@ -108,15 +123,19 @@ and for `kyutai/stt-2.6b-en`, use `configs/config-stt-en-hf.toml`,
 moshi-server worker --config configs/config-stt-en_fr-hf.toml
 ```
 
-Once the server has started you can run a streaming inference with the following
-script.
+Once the server has started you can transcribe audio from your microphone with the following script.
+```bash
+uv run scripts/transcribe_from_mic_via_rust_server.py
+```
+
+We also provide a script for transcribing from an audio file.
 ```bash
 uv run scripts/transcribe_from_file_via_rust_server.py bria.mp3
 ```
 
 The script limits the decoding speed to simulates real-time processing of the audio. 
 Faster processing can be triggered by setting 
-the real-time factor, e.g. `--rtf 500` will process
+the real-time factor, e.g. `--rtf 1000` will process
 the data as fast as possible.
 
 ### Rust standalone
