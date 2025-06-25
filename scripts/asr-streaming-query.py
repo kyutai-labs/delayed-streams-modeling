@@ -115,7 +115,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("in_file")
     parser.add_argument("--transcript")
-    parser.add_argument("--api-key", default="open_key")
+    parser.add_argument("--api-key", default="open_token")
     parser.add_argument(
         "--url",
         help="The url of the server to which to send the audio",
