@@ -9,9 +9,9 @@
 # ///
 import argparse
 import asyncio
-import msgpack
 import signal
 
+import msgpack
 import numpy as np
 import sounddevice as sd
 import websockets
@@ -20,6 +20,7 @@ import websockets
 TARGET_SAMPLE_RATE = 24000
 TARGET_CHANNELS = 1  # Mono
 audio_queue = asyncio.Queue()
+
 
 async def receive_messages(websocket):
     """Receive and process messages from the WebSocket server."""
@@ -47,22 +48,26 @@ async def send_messages(websocket):
     except websockets.ConnectionClosed:
         print("Connection closed while sending messages.")
 
+
 async def stream_audio(url: str, api_key: str):
     """Stream audio data to a WebSocket server."""
     print("Starting microphone recording...")
     print("Press Ctrl+C to stop recording")
 
     loop = asyncio.get_event_loop()
-    def audio_callback(indata, frames, time, status):
-        loop.call_soon_threadsafe(audio_queue.put_nowait, indata[:, 0].astype(np.float32).copy())
 
-     # Start audio stream
+    def audio_callback(indata, frames, time, status):
+        loop.call_soon_threadsafe(
+            audio_queue.put_nowait, indata[:, 0].astype(np.float32).copy()
+        )
+
+    # Start audio stream
     with sd.InputStream(
         samplerate=TARGET_SAMPLE_RATE,
         channels=TARGET_CHANNELS,
-        dtype='float32',
+        dtype="float32",
         callback=audio_callback,
-        blocksize=1920  # 80ms blocks
+        blocksize=1920,  # 80ms blocks
     ):
         headers = {"kyutai-api-key": api_key}
         async with websockets.connect(url, additional_headers=headers) as websocket:
@@ -79,11 +84,15 @@ if __name__ == "__main__":
         default="ws://127.0.0.1:8080",
     )
     parser.add_argument("--api-key", default="open_token")
-    parser.add_argument("--list-devices", action="store_true", help="List available audio devices")
-    parser.add_argument("--device", type=int, help="Input device ID (use --list-devices to see options)")
-    
+    parser.add_argument(
+        "--list-devices", action="store_true", help="List available audio devices"
+    )
+    parser.add_argument(
+        "--device", type=int, help="Input device ID (use --list-devices to see options)"
+    )
+
     args = parser.parse_args()
-    
+
     def handle_sigint(signum, frame):
         print("Interrupted by user")
         exit(0)
@@ -94,9 +103,9 @@ if __name__ == "__main__":
         print("Available audio devices:")
         print(sd.query_devices())
         exit(0)
-    
+
     if args.device is not None:
         sd.default.device[0] = args.device  # Set input device
-    
+
     url = f"{args.url}/api/asr-streaming"
     asyncio.run(stream_audio(url, args.api_key))

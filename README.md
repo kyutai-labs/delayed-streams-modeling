@@ -47,6 +47,10 @@ wget https://github.com/kyutai-labs/moshi/raw/refs/heads/main/data/sample_fr_hib
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
+For an example of how to use the model in a way where you can directly stream in PyTorch tensors,
+[see our Colab notebook](https://colab.research.google.com/drive/1mc0Q-FoHxU2pEvId8rTdS4q1r1zorJhS?usp=sharing).
+
+If you just want to run the model on a file, you can use `moshi.run_inference`.
 This requires the [moshi package](https://pypi.org/project/moshi/)
 with version 0.2.6 or later, which can be installed via pip.
 
@@ -107,7 +111,7 @@ moshi-server worker --config configs/config-stt-en_fr-hf.toml
 Once the server has started you can run a streaming inference with the following
 script.
 ```bash
-uv run scripts/asr-streaming-query.py bria.mp3
+uv run scripts/transcribe_from_file_via_rust_server.py bria.mp3
 ```
 
 The script limits the decoding speed to simulates real-time processing of the audio. 
@@ -166,3 +170,14 @@ Note that parts of this code is based on [AudioCraft](https://github.com/faceboo
 the MIT license.
 
 The weights for the speech-to-text models are released under the CC-BY 4.0 license.
+
+## Developing
+
+Install the [pre-commit hooks](https://pre-commit.com/) by running:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+If you're using `uv`, you can replace the two commands with `uvx pre-commit install`.

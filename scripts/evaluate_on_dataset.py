@@ -41,18 +41,17 @@ uv run scripts/streaming_stt.py \
 # Rev16 === cer: 6.57% wer: 10.08% corpus_wer: 11.43% RTF = 40.34
 # Earnings21 === cer: 5.73% wer: 9.84% corpus_wer: 10.38% RTF = 73.15
 
-import dataclasses
-import julius
-import jiwer
-from datasets import load_dataset, Dataset
-from whisper.normalizers import EnglishTextNormalizer
 import argparse
-
-import torch
-import moshi.models
-import tqdm
+import dataclasses
 import time
 
+import jiwer
+import julius
+import moshi.models
+import torch
+import tqdm
+from datasets import Dataset, load_dataset
+from whisper.normalizers import EnglishTextNormalizer
 
 _NORMALIZER = EnglishTextNormalizer()
 
@@ -120,9 +119,9 @@ class AsrMetrics:
         self.num_sequences += 1
 
     def compute(self) -> dict:
-        assert (
-            self.num_sequences > 0
-        ), "Unable to compute with total number of comparisons <= 0"  # type: ignore
+        assert self.num_sequences > 0, (
+            "Unable to compute with total number of comparisons <= 0"
+        )  # type: ignore
         return {
             "cer": (self.cer_sum / self.num_sequences),
             "wer": (self.wer_sum / self.num_sequences),

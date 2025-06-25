@@ -11,19 +11,16 @@
 # ///
 
 import argparse
-from dataclasses import dataclass
 import json
-import numpy as np
 import queue
-import sounddevice as sd
 
-from huggingface_hub import hf_hub_download
 import mlx.core as mx
 import mlx.nn as nn
-from moshi_mlx import models, utils
 import rustymimi
 import sentencepiece
-
+import sounddevice as sd
+from huggingface_hub import hf_hub_download
+from moshi_mlx import models, utils
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -69,6 +66,7 @@ if __name__ == "__main__":
     )
 
     block_queue = queue.Queue()
+
     def audio_callback(indata, _frames, _time, _status):
         block_queue.put(indata.copy())
 
@@ -84,7 +82,9 @@ if __name__ == "__main__":
             block = block_queue.get()
             block = block[None, :, 0]
             other_audio_tokens = audio_tokenizer.encode_step(block[None, 0:1])
-            other_audio_tokens = mx.array(other_audio_tokens).transpose(0, 2, 1)[:, :, :other_codebooks]
+            other_audio_tokens = mx.array(other_audio_tokens).transpose(0, 2, 1)[
+                :, :, :other_codebooks
+            ]
             text_token = gen.step(other_audio_tokens[0])
             text_token = text_token[0].item()
             audio_tokens = gen.last_audio_tokens()
@@ -93,4 +93,3 @@ if __name__ == "__main__":
                 _text = text_tokenizer.id_to_piece(text_token)  # type: ignore
                 _text = _text.replace("▁", " ")
                 print(_text, end="", flush=True)
- 

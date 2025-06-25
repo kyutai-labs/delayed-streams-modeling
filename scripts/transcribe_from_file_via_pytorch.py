@@ -19,15 +19,15 @@ uv run scripts/streaming_stt_timestamps.py \
 ```
 """
 
-import itertools
-import dataclasses
-import julius
-import sphn
 import argparse
+import dataclasses
+import itertools
 import math
 
-import torch
+import julius
 import moshi.models
+import sphn
+import torch
 import tqdm
 
 
