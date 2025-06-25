@@ -192,5 +192,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-bria.mp3
-sample_fr_hibiki_crepes.mp3

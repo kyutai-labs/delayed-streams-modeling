@@ -48,12 +48,6 @@ Here is how to choose which one to use:
   MLX is Apple's ML framework that allows you to use hardware acceleration on Apple silicon.
   If you want to run the model on a Mac or an iPhone, choose the MLX implementation.
 
-You can retrieve the sample files used in the following snippets via:
-```bash
-wget https://github.com/metavoiceio/metavoice-src/raw/main/assets/bria.mp3
-wget https://github.com/kyutai-labs/moshi/raw/refs/heads/main/data/sample_fr_hibiki_crepes.mp3
-```
-
 ### PyTorch implementation
 <a href="https://huggingface.co/kyutai/stt-2.6b-en" target="_blank" style="margin: 2px;">
     <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue" style="display: inline-block; vertical-align: middle;"/>
@@ -70,12 +64,12 @@ This requires the [moshi package](https://pypi.org/project/moshi/)
 with version 0.2.6 or later, which can be installed via pip.
 
 ```bash
-python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
+python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en audio/bria.mp3
 ```
 
 If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step and run directly:
 ```bash
-uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en bria.mp3
+uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en audio/bria.mp3
 ```
 
 Additionally, we provide two scripts that highlight different usage scenarios. The first script illustrates how to extract word-level timestamps from the model's outputs:
@@ -84,7 +78,7 @@ Additionally, we provide two scripts that highlight different usage scenarios. T
 uv run \
   scripts/transcribe_from_file_via_pytorch.py \
   --hf-repo kyutai/stt-2.6b-en \
-  --file bria.mp3
+  --file audio/bria.mp3
 ```
 
 The second script can be used to run a model on an existing Hugging Face dataset and calculate its performance metrics: 
@@ -130,7 +124,7 @@ uv run scripts/transcribe_from_mic_via_rust_server.py
 
 We also provide a script for transcribing from an audio file.
 ```bash
-uv run scripts/transcribe_from_file_via_rust_server.py bria.mp3
+uv run scripts/transcribe_from_file_via_rust_server.py audio/bria.mp3
 ```
 
 The script limits the decoding speed to simulates real-time processing of the audio. 
@@ -147,7 +141,7 @@ A standalone Rust example script is provided in the `stt-rs` directory in this r
 This can be used as follows:
 ```bash
 cd stt-rs
-cargo run --features cuda -r -- bria.mp3
+cargo run --features cuda -r -- audio/bria.mp3
 ```
 You can get the timestamps by adding the `--timestamps` flag, and see the output
 of the semantic VAD by adding the `--vad` flag.
@@ -164,12 +158,12 @@ This requires the [moshi-mlx package](https://pypi.org/project/moshi-mlx/)
 with version 0.2.6 or later, which can be installed via pip.
 
 ```bash
-python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
+python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx audio/bria.mp3 --temp 0
 ```
 
 If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step and run directly:
 ```bash
-uvx --with moshi-mlx python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx bria.mp3 --temp 0
+uvx --with moshi-mlx python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx audio/bria.mp3 --temp 0
 ```
 It will install the moshi package in a temporary environment and run the speech-to-text.
 
