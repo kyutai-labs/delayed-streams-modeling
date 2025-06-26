@@ -1,7 +1,7 @@
 static_dir = "./static/"
 log_dir = "$HOME/tmp/tts-logs"
 instance_name = "tts"
-authorized_ids = ["open_token"]
+authorized_ids = ["public_token"]
 
 [modules.asr]
 path = "/api/asr-streaming"

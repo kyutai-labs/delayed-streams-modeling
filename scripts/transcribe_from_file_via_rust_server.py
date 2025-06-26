@@ -18,7 +18,6 @@ import websockets
 
 SAMPLE_RATE = 24000
 FRAME_SIZE = 1920  # Send data in chunks
-HEADERS = {"kyutai-api-key": "open_token"}
 
 
 def load_and_process_audio(file_path):
@@ -130,4 +129,7 @@ if __name__ == "__main__":
 
     print()
     print()
-    print(transcript)
+    for word in transcript:
+        print(
+            f"{word['timestamp'][0]:7.2f} -{word['timestamp'][1]:7.2f}  {word['text']}"
+        )
