@@ -8,7 +8,7 @@ anyhow = "1.0"
 candle = { version = "0.9.1",  package = "candle-core" }
 candle-nn = "0.9.1"
 clap = { version = "4.4.12", features = ["derive"] }
-hf-hub = "0.3.2"
+hf-hub = "0.4.3"
 kaudio = "0.2.1"
 moshi = "0.6.1"
 sentencepiece = "0.11.3"
