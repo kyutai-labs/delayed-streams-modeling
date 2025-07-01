@@ -59,18 +59,17 @@ Here is how to choose which one to use:
 For an example of how to use the model in a way where you can directly stream in PyTorch tensors,
 [see our Colab notebook](https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/transcribe_via_pytorch.ipynb).
 
-If you just want to run the model on a file, you can use `moshi.run_inference`.
 This requires the [moshi package](https://pypi.org/project/moshi/)
 with version 0.2.6 or later, which can be installed via pip.
+
+If you just want to run the model on a file, you can use `moshi.run_inference`.
 
 ```bash
 python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en audio/bria.mp3
 ```
 
-If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step and run directly:
-```bash
-uvx --with moshi python -m moshi.run_inference --hf-repo kyutai/stt-2.6b-en audio/bria.mp3
-```
+If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step
+and just prefix the command above with `uvx --with moshi`.
 
 Additionally, we provide two scripts that highlight different usage scenarios. The first script illustrates how to extract word-level timestamps from the model's outputs:
 
@@ -157,15 +156,20 @@ hardware acceleration on Apple silicon.
 This requires the [moshi-mlx package](https://pypi.org/project/moshi-mlx/)
 with version 0.2.6 or later, which can be installed via pip.
 
+If you just want to run the model on a file, you can use `moshi_mlx.run_inference`:
+
 ```bash
 python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx audio/bria.mp3 --temp 0
 ```
 
-If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step and run directly:
+If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step
+and just prefix the command above with `uvx --with moshi-mlx`.
+
+If you want to transcribe audio from your microphone, use:
+
 ```bash
-uvx --with moshi-mlx python -m moshi_mlx.run_inference --hf-repo kyutai/stt-2.6b-en-mlx audio/bria.mp3 --temp 0
+python scripts/transcribe_from_mic_via_mlx.py
 ```
-It will install the moshi package in a temporary environment and run the speech-to-text.
 
 The MLX models can also be used in swift using the [moshi-swift
 codebase](https://github.com/kyutai-labs/moshi-swift), the 1b model has been

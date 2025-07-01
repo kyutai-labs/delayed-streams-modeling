@@ -10,13 +10,6 @@
 
 """An example script that illustrates how one can get per-word timestamps from
 Kyutai STT models.
-
-Usage:
-```
-uv run scripts/streaming_stt_timestamps.py \
-    --hf-repo kyutai/stt-2.6b-en \
-    --file bria.mp3
-```
 """
 
 import argparse
@@ -185,6 +178,8 @@ def main(args):
             if text_tokens is not None:
                 text_tokens_accum.append(text_tokens)
 
+            print(tokenizer.decode(text_tokens.numpy().tolist()))
+
     utterance_tokens = torch.concat(text_tokens_accum, dim=-1)
     timed_text = tokens_to_timestamped_text(
         utterance_tokens,
@@ -201,11 +196,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Example streaming STT w/ timestamps.")
-    parser.add_argument(
-        "--file",
-        required=True,
-        help="File to transcribe.",
-    )
+    parser.add_argument("in_file", help="The file to transcribe.")
 
     parser.add_argument(
         "--hf-repo", type=str, help="HF repo to load the STT model from. "

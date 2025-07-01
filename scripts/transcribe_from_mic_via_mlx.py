@@ -70,7 +70,7 @@ if __name__ == "__main__":
     def audio_callback(indata, _frames, _time, _status):
         block_queue.put(indata.copy())
 
-    print("start recording the user input")
+    print("recording audio from microphone, speak to get your words transcribed")
     with sd.InputStream(
         channels=1,
         dtype="float32",

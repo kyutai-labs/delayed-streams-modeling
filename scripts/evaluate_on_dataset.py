@@ -14,14 +14,6 @@
 Example implementation of the streaming STT example. Here we group
 test utterances in batches (pre- and post-padded with silence) and
 and then feed these batches into the streaming STT model frame-by-frame.
-
-Example command:
-```
-uv run scripts/streaming_stt.py \
-    --dataset meanwhile \
-    --hf-repo  kyutai/stt-2.6b-en
-```
-
 """
 
 # The outputs I get on my H100 using this code with the 2.6B model,
@@ -365,7 +357,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--hf-repo", type=str, help="HF repo to load the STT model from. "
+        "--hf-repo", type=str, help="HF repo to load the STT model from."
     )
     parser.add_argument("--tokenizer", type=str, help="Path to a local tokenizer file.")
     parser.add_argument(
