@@ -88,6 +88,22 @@ uv run scripts/evaluate_on_dataset.py  \
   --hf-repo kyutai/stt-2.6b-en
 ```
 
+Another example shows how one can provide a text-, audio-, or text-audio prompt to our STT model:
+```bash
+uv run scripts/transcribe_from_file_via_pytorch_with_prompt.py \
+  --hf-repo kyutai/stt-2.6b-en \
+  --file bria.mp3 \
+  --prompt_file ./audio/loonah.mp3 \
+  --prompt_text "Loonah" \
+  --cut-prompt-transcript
+```
+Produces the transcript of `bria.mp3` using the `Loonah` spelling for the name, instead of the `Luna` used without any prompt:
+```
+In the heart of an ancient forest, where the trees whispered secrets of the past, there lived a peculiar rabbit named Loonah (...)
+```
+Please bear in mind that is an experimental feature and its behavior is very sensitive to the prompt provided.
+
+
 ### Rust server
 
 <a href="https://huggingface.co/kyutai/stt-2.6b-en-candle" target="_blank" style="margin: 2px;">
