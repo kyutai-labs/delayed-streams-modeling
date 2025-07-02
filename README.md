@@ -222,7 +222,35 @@ and just prefix the command above with `uvx --with moshi`.
 
 ### Rust server
 
-Example coming soon.
+
+The Rust implementation provides a server that can process multiple streaming
+queries in parallel.
+
+In order to run the server, install the [moshi-server
+crate](https://crates.io/crates/moshi-server) via the following command. The
+server code can be found in the
+[kyutai-labs/moshi](https://github.com/kyutai-labs/moshi/tree/main/rust/moshi-server)
+repository.
+```bash
+cargo install --features cuda moshi-server
+```
+
+
+Then the server can be started via the following command using the config file
+from this repository.
+
+```bash
+moshi-server worker --config configs/config-tts.toml
+```
+
+Once the server has started you can connect to it using our script as follows:
+```bash
+# From stdin, plays audio immediately
+echo "Hey, how are you?" | python scripts/tts_rust_server.py - -
+
+# From text file to audio file
+python scripts/tts_rust_server.py text_to_say.txt audio_output.wav
+```
 
 ### MLX implementation
 
