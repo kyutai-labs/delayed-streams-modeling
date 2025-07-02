@@ -101,6 +101,10 @@ Produces the transcript of `bria.mp3` using the `Loonah` spelling for the name, 
 ```
 In the heart of an ancient forest, where the trees whispered secrets of the past, there lived a peculiar rabbit named Loonah (...)
 ```
+
+Apart from nudging the model for a specific spelling of a word, other potential use-cases include speaker adaptation and steering the model towards a formatting or a language.
+
+
 Please bear in mind that is an experimental feature and its behavior is very sensitive to the prompt provided.
 
 
