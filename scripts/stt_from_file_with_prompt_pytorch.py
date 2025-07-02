@@ -14,15 +14,7 @@ import tqdm
 
 
 class PromptHook:
-    def __init__(
-        self,
-        tokenizer,
-        prefix,
-        padding_tokens=(
-            0,
-            3,
-        ),
-    ):
+    def __init__(self, tokenizer, prefix, padding_tokens=(0, 3)):
         self.tokenizer = tokenizer
         self.prefix_enforce = deque(self.tokenizer.encode(prefix))
         self.padding_tokens = padding_tokens
@@ -141,7 +133,7 @@ def main(args):
         prompt_frames = audio_prompt.shape[1] // mimi.frame_size
         no_prompt_offset_seconds = audio_delay_seconds + audio_silence_prefix_seconds
         no_prompt_offset = int(no_prompt_offset_seconds * mimi.frame_rate)
-        text_tokens = text_tokens[prompt_frames + no_prompt_offset:]
+        text_tokens = text_tokens[prompt_frames + no_prompt_offset :]
 
     text = tokenizer.decode(
         text_tokens[text_tokens > padding_token_id].numpy().tolist()

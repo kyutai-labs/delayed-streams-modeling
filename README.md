@@ -48,12 +48,12 @@ Here is how to choose which one to use:
 <a href="https://huggingface.co/kyutai/stt-2.6b-en" target="_blank" style="margin: 2px;">
     <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue" style="display: inline-block; vertical-align: middle;"/>
 </a>
-<a target="_blank" href="https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/transcribe_via_pytorch.ipynb">
+<a target="_blank" href="https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/stt_pytorch.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
 For an example of how to use the model in a way where you can directly stream in PyTorch tensors,
-[see our Colab notebook](https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/transcribe_via_pytorch.ipynb).
+[see our Colab notebook](https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/stt_pytorch.ipynb).
 
 This requires the [moshi package](https://pypi.org/project/moshi/)
 with version 0.2.6 or later, which can be installed via pip.
@@ -71,7 +71,7 @@ Additionally, we provide two scripts that highlight different usage scenarios. T
 
 ```bash
 uv run \
-  scripts/transcribe_from_file_via_pytorch.py \
+  scripts/stt_from_file_pytorch.py \
   --hf-repo kyutai/stt-2.6b-en \
   --file audio/bria.mp3
 ```
@@ -85,7 +85,7 @@ uv run scripts/evaluate_on_dataset.py  \
 
 Another example shows how one can provide a text-, audio-, or text-audio prompt to our STT model:
 ```bash
-uv run scripts/transcribe_from_file_via_pytorch_with_prompt.py \
+uv run scripts/stt_from_file_pytorch_with_prompt.py \
   --hf-repo kyutai/stt-2.6b-en \
   --file bria.mp3 \
   --prompt_file ./audio/loonah.mp3 \
@@ -131,12 +131,12 @@ moshi-server worker --config configs/config-stt-en_fr-hf.toml
 
 Once the server has started you can transcribe audio from your microphone with the following script.
 ```bash
-uv run scripts/transcribe_from_mic_via_rust_server.py
+uv run scripts/stt_from_mic_rust_server.py
 ```
 
 We also provide a script for transcribing from an audio file.
 ```bash
-uv run scripts/transcribe_from_file_via_rust_server.py audio/bria.mp3
+uv run scripts/stt_from_file_rust_server.py audio/bria.mp3
 ```
 
 The script limits the decoding speed to simulates real-time processing of the audio. 
@@ -181,7 +181,7 @@ and just prefix the command above with `uvx --with moshi-mlx`.
 If you want to transcribe audio from your microphone, use:
 
 ```bash
-python scripts/transcribe_from_mic_via_mlx.py
+python scripts/stt_from_mic_mlx.py
 ```
 
 The MLX models can also be used in swift using the [moshi-swift
@@ -190,7 +190,7 @@ tested to work fine on an iPhone 16 Pro.
 
 ## Kyutai Text-to-Speech
 
-<a target="_blank" href="https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/transcribe_via_pytorch.ipynb">
+<a target="_blank" href="https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/stt_pytorch.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
