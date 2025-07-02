@@ -1,10 +1,4 @@
-<a href="https://huggingface.co/collections/kyutai/speech-to-text-685403682cf8a23ab9466886" target="_blank" style="margin: 2px;">
-    <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-KyutaiSTT-blue" style="display: inline-block; vertical-align: middle;"/>
-</a>
-<a target="_blank" href="https://colab.research.google.com/github/kyutai-labs/delayed-streams-modeling/blob/main/transcribe_via_pytorch.ipynb">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a>
-
+# Delayed Streams Modeling: Kyutai STT & TTS
 
 This repo contains instructions and examples of how to run
 [Kyutai Speech-To-Text](#kyutai-speech-to-text)
@@ -17,6 +11,10 @@ Text-to-speech models based on DSM coming soon!
 to be notified when we open-source text-to-speech and [Unmute](https://unmute.sh).
 
 ## Kyutai Speech-To-Text
+
+<a href="https://huggingface.co/collections/kyutai/speech-to-text-685403682cf8a23ab9466886" target="_blank" style="margin: 2px;">
+    <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-KyutaiSTT-blue" style="display: inline-block; vertical-align: middle;"/>
+</a>
 
 **More details can be found on the [project page](https://kyutai.org/next/stt).**
 
