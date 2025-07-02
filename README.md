@@ -6,10 +6,6 @@ and [Kyutai Text-To-Speech](#kyutai-text-to-speech) models.
 These models are powered by delayed streams modeling (DSM),
 a flexible formulation for streaming, multimodal sequence-to-sequence learning.
 
-Text-to-speech models based on DSM coming soon!
-[Sign up here](https://docs.google.com/forms/d/15sB4zyfuwyXTii4OM74hFGkk4DlDNynJ9xywnaEzE4I/edit)
-to be notified when we open-source text-to-speech and [Unmute](https://unmute.sh).
-
 ## Kyutai Speech-To-Text
 
 <a href="https://huggingface.co/collections/kyutai/speech-to-text-685403682cf8a23ab9466886" target="_blank" style="margin: 2px;">
