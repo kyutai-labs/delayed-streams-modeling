@@ -10,8 +10,8 @@
 
 import argparse
 import json
-from pathlib import Path
 import queue
+import sys
 import time
 
 import numpy as np
@@ -105,8 +105,13 @@ def main():
     mimi = tts_model.mimi
 
     log("info", f"reading input from {args.inp}")
-    with open(args.inp, "r") as fobj:
-        text_to_tts = fobj.read().strip()
+    if args.inp == "-":
+        if sys.stdin.isatty():  # Interactive
+            print("Enter text to synthesize (Ctrl+D to end input):")
+        text_to_tts = sys.stdin.read().strip()
+    else:
+        with open(args.inp, "r") as fobj:
+            text_to_tts = fobj.read().strip()
 
     all_entries = [tts_model.prepare_script([text_to_tts])]
     if tts_model.multi_speaker:
