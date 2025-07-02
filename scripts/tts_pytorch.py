@@ -17,16 +17,6 @@ from moshi.models.loaders import CheckpointInfo
 from moshi.models.tts import DEFAULT_DSM_TTS_REPO, DEFAULT_DSM_TTS_VOICE_REPO, TTSModel
 
 
-def audio_to_int16(audio: np.ndarray) -> np.ndarray:
-    if audio.dtype == np.int16:
-        return audio
-    elif audio.dtype == np.float32:
-        # Multiply by 32767 and not 32768 so that int16 doesn't overflow.
-        return (np.clip(audio, -1, 1) * 32767).astype(np.int16)
-    else:
-        raise TypeError(f"Unsupported audio data type: {audio.dtype}")
-
-
 def play_audio(audio: np.ndarray, sample_rate: int):
     # Requires the Portaudio library which might not be available in all environments.
     import sounddevice as sd
@@ -86,7 +76,8 @@ def main():
     )
 
     print("Generating audio...")
-    # This doesn't do streaming generation,
+    # This doesn't do streaming generation, but the model allows it. For now, see Rust
+    # example.
     result = tts_model.generate([entries], [condition_attributes])
 
     frames = torch.cat(result.frames, dim=-1)
