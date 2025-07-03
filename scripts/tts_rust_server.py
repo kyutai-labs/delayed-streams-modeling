@@ -24,7 +24,6 @@ import websockets
 SAMPLE_RATE = 24000
 
 TTS_TEXT = "Hello, this is a test of the moshi text to speech system, this should result in some nicely sounding generated voice."
-DEFAULT_DSM_TTS_REPO = "kyutai/tts-1.6b-en_fr"
 DEFAULT_DSM_TTS_VOICE_REPO = "kyutai/tts-voices"
 AUTH_TOKEN = "public_token"
 
@@ -64,6 +63,7 @@ async def output_audio(out: str, output_queue: asyncio.Queue[np.ndarray | None])
                     outdata[:, 0] = pcm_data
                 else:
                     should_exit = True
+                    outdata[:] = 0
             except asyncio.QueueEmpty:
                 outdata[:] = 0
 
@@ -94,17 +94,6 @@ async def websocket_client():
     parser.add_argument("inp", type=str, help="Input file, use - for stdin.")
     parser.add_argument(
         "out", type=str, help="Output file to generate, use - for playing the audio"
-    )
-    parser.add_argument(
-        "--hf-repo",
-        type=str,
-        default=DEFAULT_DSM_TTS_REPO,
-        help="HF repo in which to look for the pretrained models.",
-    )
-    parser.add_argument(
-        "--voice-repo",
-        default=DEFAULT_DSM_TTS_VOICE_REPO,
-        help="HF repo in which to look for pre-computed voice embeddings.",
     )
     parser.add_argument(
         "--voice",
