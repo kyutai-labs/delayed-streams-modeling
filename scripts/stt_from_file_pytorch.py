@@ -150,7 +150,7 @@ def main(args):
     audio_delay_seconds = info.stt_config.get("audio_delay_seconds", 5.0)
     padding_token_id = info.raw_config.get("text_padding_token_id", 3)
 
-    audio, input_sample_rate = sphn.read(args.file)
+    audio, input_sample_rate = sphn.read(args.in_file)
     audio = torch.from_numpy(audio).to(args.device)
     audio = julius.resample_frac(audio, input_sample_rate, mimi.sample_rate)
     if audio.shape[-1] % mimi.frame_size != 0:
@@ -177,8 +177,6 @@ def main(args):
             text_tokens = lm_gen.step(audio_tokens)
             if text_tokens is not None:
                 text_tokens_accum.append(text_tokens)
-
-            print(tokenizer.decode(text_tokens.numpy().tolist()))
 
     utterance_tokens = torch.concat(text_tokens_accum, dim=-1)
     timed_text = tokens_to_timestamped_text(
