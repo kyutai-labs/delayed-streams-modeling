@@ -127,6 +127,7 @@ async def websocket_client():
     async with websockets.connect(uri, additional_headers=headers) as websocket:
         await websocket.send(msgpack.packb({"type": "Text", "text": text_to_tts}))
         await websocket.send(msgpack.packb({"type": "Eos"}))
+        # await websocket.send(msgpack.packb({"type": "invalidmessage"}))
 
         output_queue = asyncio.Queue()
         receive_task = asyncio.create_task(receive_messages(websocket, output_queue))

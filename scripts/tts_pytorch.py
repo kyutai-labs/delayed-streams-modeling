@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "moshi @ git+https://git@github.com/kyutai-labs/moshi#egg=moshi&subdirectory=moshi",
+#     "moshi==0.2.7",
 #     "torch",
 #     "sphn",
 #     "sounddevice",

@@ -19,7 +19,7 @@ runs:
       .  env/bin/activate
       python -m pip install --upgrade pip
       pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
-      pip install moshi==0.2.6
+      pip install moshi==0.2.7
       pip install pre-commit
   - name: Setup env
     shell: bash
