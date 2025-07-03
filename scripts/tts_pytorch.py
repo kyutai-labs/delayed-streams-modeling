@@ -73,6 +73,7 @@ def main():
     if args.out == "-":
         # Stream the audio to the speakers using sounddevice.
         import sounddevice as sd
+
         pcms = queue.Queue()
 
         def _on_frame(frame):
@@ -86,10 +87,13 @@ def main():
                 outdata[:, 0] = pcm_data
             except queue.Empty:
                 outdata[:] = 0
-        with sd.OutputStream(samplerate=tts_model.mimi.sample_rate,
-                             blocksize=1920,
-                             channels=1,
-                             callback=audio_callback):
+
+        with sd.OutputStream(
+            samplerate=tts_model.mimi.sample_rate,
+            blocksize=1920,
+            channels=1,
+            callback=audio_callback,
+        ):
             tts_model.generate([entries], [condition_attributes], on_frame=_on_frame)
             time.sleep(3)
             while True:
@@ -100,7 +104,7 @@ def main():
         result = tts_model.generate([entries], [condition_attributes])
         with torch.no_grad():
             pcms = []
-            for frame in result.frames[tts_model.delay_steps:]:
+            for frame in result.frames[tts_model.delay_steps :]:
                 pcm = tts_model.mimi.decode(frame[:, 1:, :]).cpu().numpy()
                 pcms.append(np.clip(pcm[0, 0], -1, 1))
             pcm = np.concatenate(pcms, axis=-1)

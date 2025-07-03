@@ -1,7 +1,6 @@
 """An example script that illustrates how one can prompt Kyutai STT models."""
 
 import argparse
-import dataclasses
 import itertools
 import math
 from collections import deque
