@@ -1,0 +1,20 @@
+static_dir = "./static/"
+log_dir = "$HOME/tmp/tts-logs"
+instance_name = "tts"
+authorized_ids = ["public_token"]
+
+[modules.tts_py]
+type = "Py"
+path = "/api/tts_streaming"
+text_tokenizer_file = "hf://kyutai/unmute/test_en_fr_audio_8000.model"
+batch_size = 8  # Adjust to your GPU memory capacity
+text_bos_token = 1
+
+[modules.tts_py.py]
+log_folder = "$HOME/tmp/moshi-server-logs"
+voice_folder = "hf-snapshot://kyutai/tts-voices/**/*.safetensors"
+default_voice = "unmute-prod-website/default_voice.wav"
+cfg_coef = 2.0
+cfg_is_no_text = true
+padding_between = 1
+n_q = 24
