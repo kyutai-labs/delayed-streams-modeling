@@ -65,6 +65,7 @@ def main():
     voice_path = tts_model.get_voice_path(args.voice)
     # CFG coef goes here because the model was trained with CFG distillation,
     # so it's not _actually_ doing CFG at inference time.
+    # Also, if you are generating a dialog, you should have at least two voices in the list.
     condition_attributes = tts_model.make_condition_attributes(
         [voice_path], cfg_coef=2.0
     )
