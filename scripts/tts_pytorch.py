@@ -51,7 +51,6 @@ def main():
     tts_model = TTSModel.from_checkpoint_info(
         checkpoint_info, n_q=32, temp=0.6, device=torch.device("cuda"), dtype=torch.half
     )
-    tts_model.mimi.streaming_forever(batch_size=1)
 
     if args.inp == "-":
         if sys.stdin.isatty():  # Interactive
@@ -61,7 +60,7 @@ def main():
         with open(args.inp, "r") as fobj:
             text = fobj.read().strip()
 
-    # You could also generate multiple audios at once by passing a list of texts.
+    # If you want to make a dialog, you can pass more than one turn [text_speaker_1, text_speaker_2, text_2_speaker_1, ...]
     entries = tts_model.prepare_script([text], padding_between=1)
     voice_path = tts_model.get_voice_path(args.voice)
     # CFG coef goes here because the model was trained with CFG distillation,
@@ -76,6 +75,7 @@ def main():
 
         pcms = queue.Queue()
 
+        @torch.no_grad()
         def _on_frame(frame):
             if (frame != -1).all():
                 pcm = tts_model.mimi.decode(frame[:, 1:, :]).cpu().numpy()
@@ -94,7 +94,8 @@ def main():
             channels=1,
             callback=audio_callback,
         ):
-            tts_model.generate([entries], [condition_attributes], on_frame=_on_frame)
+            with tts_model.mimi.streaming(1):
+                tts_model.generate([entries], [condition_attributes], on_frame=_on_frame)
             time.sleep(3)
             while True:
                 if pcms.qsize() == 0:
@@ -102,7 +103,7 @@ def main():
                 time.sleep(1)
     else:
         result = tts_model.generate([entries], [condition_attributes])
-        with torch.no_grad():
+        with tts_model.mimi.streaming(1), torch.no_grad():
             pcms = []
             for frame in result.frames[tts_model.delay_steps :]:
                 pcm = tts_model.mimi.decode(frame[:, 1:, :]).cpu().numpy()
