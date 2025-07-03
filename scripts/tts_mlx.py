@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "huggingface_hub",
-#     "moshi_mlx @ git+https://git@github.com/kyutai-labs/moshi#egg=moshi_mlx&subdirectory=moshi_mlx",
+#     "moshi_mlx==0.2.9",
 #     "numpy",
 #     "sounddevice",
 # ]
