@@ -80,7 +80,14 @@ Additionally, we provide two scripts that highlight different usage scenarios. T
 uv run \
   scripts/stt_from_file_pytorch.py \
   --hf-repo kyutai/stt-2.6b-en \
-  --file audio/bria.mp3
+  audio/bria.mp3
+
+# or
+
+uv run \
+  scripts/stt_from_file_pytorch.py \
+  --hf-repo kyutai/stt-1b-en_fr \
+  audio/bria.mp3
 ```
 
 The second script can be used to run a model on an existing Hugging Face dataset and calculate its performance metrics: 
