@@ -152,6 +152,7 @@ def main(args):
 
     audio, input_sample_rate = sphn.read(args.in_file)
     audio = torch.from_numpy(audio).to(args.device)
+    audio = audio.mean(dim=0, keepdim=True) # Convert to mono
     audio = julius.resample_frac(audio, input_sample_rate, mimi.sample_rate)
     if audio.shape[-1] % mimi.frame_size != 0:
         to_pad = mimi.frame_size - audio.shape[-1] % mimi.frame_size
