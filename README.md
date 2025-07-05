@@ -80,7 +80,7 @@ Additionally, we provide two scripts that highlight different usage scenarios. T
 uv run \
   scripts/stt_from_file_pytorch.py \
   --hf-repo kyutai/stt-2.6b-en \
-  --file audio/bria.mp3
+  audio/bria.mp3
 ```
 
 The second script can be used to run a model on an existing Hugging Face dataset and calculate its performance metrics: 
@@ -164,7 +164,7 @@ A standalone Rust example script is provided in the `stt-rs` directory in this r
 This can be used as follows:
 ```bash
 cd stt-rs
-cargo run --features cuda -r -- audio/bria.mp3
+cargo run --features cuda -r -- ../audio/bria.mp3
 ```
 You can get the timestamps by adding the `--timestamps` flag, and see the output
 of the semantic VAD by adding the `--vad` flag.
