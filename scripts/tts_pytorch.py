@@ -44,12 +44,26 @@ def main():
         help="The voice to use, relative to the voice repo root. "
         f"See {DEFAULT_DSM_TTS_VOICE_REPO}",
     )
+    parser.add_argument(
+        "--cpu",
+        action="store_true",
+        help="Use CPU instead of GPU for inference",
+    )
     args = parser.parse_args()
 
     print("Loading model...")
     checkpoint_info = CheckpointInfo.from_hf_repo(args.hf_repo)
+
+    # Set device and precision
+    if args.cpu:
+        device = torch.device("cpu")
+        dtype = torch.float32
+    else:
+        device = torch.device("cuda")
+        dtype = torch.bfloat16
+
     tts_model = TTSModel.from_checkpoint_info(
-        checkpoint_info, n_q=32, temp=0.6, device=torch.device("cuda")
+        checkpoint_info, n_q=32, temp=0.6, device=device, dtype=dtype
     )
 
     if args.inp == "-":

@@ -234,6 +234,9 @@ echo "Hey, how are you?" | python scripts/tts_pytorch.py - -
 
 # From text file to audio file
 python scripts/tts_pytorch.py text_to_say.txt audio_output.wav
+
+# Use --cpu flag for CPU-only inference
+python scripts/tts_pytorch.py --cpu text_to_say.txt audio_output.wav
 ```
 
 This requires the [moshi package](https://pypi.org/project/moshi/), which can be installed via pip.
