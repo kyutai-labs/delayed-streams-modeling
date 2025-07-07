@@ -20,6 +20,7 @@ from moshi.models.tts import DEFAULT_DSM_TTS_REPO, DEFAULT_DSM_TTS_VOICE_REPO, T
 
 
 def main():
+    x: int = "asdf"
     parser = argparse.ArgumentParser(
         description="Run Kyutai TTS using the PyTorch implementation"
     )
@@ -101,7 +102,9 @@ def main():
             callback=audio_callback,
         ):
             with tts_model.mimi.streaming(1):
-                tts_model.generate([entries], [condition_attributes], on_frame=_on_frame)
+                tts_model.generate(
+                    [entries], [condition_attributes], on_frame=_on_frame
+                )
             time.sleep(3)
             while True:
                 if pcms.qsize() == 0:

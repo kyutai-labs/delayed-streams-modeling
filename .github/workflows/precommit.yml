@@ -13,5 +13,5 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/moshi_build
       - run: |
-          . env/bin/activate
-          bash .git/hooks/pre-commit
+          source env/bin/activate
+          pre-commit run --all-files
