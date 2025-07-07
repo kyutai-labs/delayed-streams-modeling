@@ -5,6 +5,7 @@ This repo contains instructions and examples of how to run
 and [Kyutai Text-To-Speech](#kyutai-text-to-speech) models.
 These models are powered by delayed streams modeling (DSM),
 a flexible formulation for streaming, multimodal sequence-to-sequence learning.
+See also [Unmute](https://github.com/kyutai-labs/unmute), an voice AI system built using Kyutai STT and Kyutai TTS.
 
 But wait, what is "Delayed Streams Modeling"? It is a technique for solving many streaming X-to-Y tasks (with X, Y in `{speech, text}`)
 that formalize the approach we had with Moshi and Hibiki. A pre-print paper is coming soon!
