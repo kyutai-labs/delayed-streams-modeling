@@ -20,7 +20,6 @@ from moshi.models.tts import DEFAULT_DSM_TTS_REPO, DEFAULT_DSM_TTS_VOICE_REPO, T
 
 
 def main():
-    x: int = "asdf"
     parser = argparse.ArgumentParser(
         description="Run Kyutai TTS using the PyTorch implementation"
     )
