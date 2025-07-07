@@ -248,17 +248,13 @@ and just prefix the command above with `uvx --with moshi`.
 The Rust implementation provides a server that can process multiple streaming
 queries in parallel.
 
-In order to run the server, install the [moshi-server
-crate](https://crates.io/crates/moshi-server) via the following command. The
-server code can be found in the
-[kyutai-labs/moshi](https://github.com/kyutai-labs/moshi/tree/main/rust/moshi-server)
-repository.
-```bash
-cargo install --features cuda moshi-server
-```
+Installing the Rust server is a bit tricky because it uses our Python implementation under the hood,
+which also requires installing the Python dependencies.
+Use the [start_tts.sh](https://github.com/kyutai-labs/unmute/blob/main/dockerless/start_tts.sh) script to properly install the Rust server.
+If you already installed the `moshi-server` crate before and it's not working, you might need to force a reinstall by running `cargo uninstall moshi-server` first.
+Feel free to open an issue if the installation is still broken.
 
-
-Then the server can be started via the following command using the config file
+Once installed, the server can be started via the following command using the config file
 from this repository.
 
 ```bash
