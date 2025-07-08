@@ -48,7 +48,10 @@ if __name__ == "__main__":
         nn.quantize(model, bits=8, group_size=64)
 
     print(f"loading model weights from {moshi_weights}")
-    model.load_weights(moshi_weights, strict=True)
+    if args.hf_repo.endswith("-candle"):
+        model.load_pytorch_weights(moshi_weights, lm_config, strict=True)
+    else:
+        model.load_weights(moshi_weights, strict=True)
 
     print(f"loading the text tokenizer from {text_tokenizer}")
     text_tokenizer = sentencepiece.SentencePieceProcessor(text_tokenizer)  # type: ignore
