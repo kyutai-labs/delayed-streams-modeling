@@ -138,13 +138,9 @@ def main(args):
 
     mimi = info.get_mimi(device=args.device)
     tokenizer = info.get_text_tokenizer()
-    lm_kwargs_overrides = {}
-    if args.vad:
-        lm_kwargs_overrides = {"extra_heads_num_heads": 4}
     lm = info.get_moshi(
         device=args.device,
         dtype=torch.bfloat16,
-        lm_kwargs_overrides=lm_kwargs_overrides,
     )
     lm_gen = moshi.models.LMGen(lm, temp=0, temp_text=0.0)
 
