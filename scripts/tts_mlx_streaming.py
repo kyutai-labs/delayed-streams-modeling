@@ -246,7 +246,7 @@ def main():
         tts_model.cfg_coef = 1.0
     mimi = tts_model.mimi
 
-    log("info", f"reading input from stdin")
+    log("info", "reading input from stdin")
 
     if tts_model.multi_speaker:
         voices = [tts_model.get_voice_path(args.voice)]
