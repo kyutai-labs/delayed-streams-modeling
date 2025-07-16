@@ -204,10 +204,10 @@ impl Model {
                             print!(" {word}");
                             std::io::stdout().flush()?
                         } else {
+                            last_word = Some((word, *start_time));
                             if let Some((word, prev_start_time)) = last_word.take() {
                                 println!("[{prev_start_time:5.2}-{start_time:5.2}] {word}");
                             }
-                            last_word = Some((word, *start_time));
                         }
                     }
                 }
