@@ -237,6 +237,14 @@ echo "Hey, how are you?" | python scripts/tts_pytorch.py - -
 python scripts/tts_pytorch.py text_to_say.txt audio_output.wav
 ```
 
+The `tts_pytorch.py` script waits for all the text to be available before
+starting the audio generation. A fully streaming implementation is available in
+the `tts_pytorch_streaming.py` script, which can be used as follows:
+
+```bash
+echo "Hey, how are you?" | python scripts/tts_pytorch_streaming.py audio_output.wav
+```
+
 This requires the [moshi package](https://pypi.org/project/moshi/), which can be installed via pip.
 If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the installation step
 and just prefix the command above with `uvx --with moshi`.
