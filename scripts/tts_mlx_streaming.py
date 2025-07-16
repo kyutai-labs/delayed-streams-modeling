@@ -239,11 +239,6 @@ def main():
         # Model was trained with CFG distillation.
         cfg_coef_conditioning = tts_model.cfg_coef
         tts_model.cfg_coef = 1.0
-        cfg_is_no_text = False
-        cfg_is_no_prefix = False
-    else:
-        cfg_is_no_text = True
-        cfg_is_no_prefix = True
     mimi = tts_model.mimi
 
     log("info", f"reading input from stdin")
