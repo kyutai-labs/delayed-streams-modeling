@@ -305,6 +305,10 @@ If you have [uv](https://docs.astral.sh/uv/) installed, you can skip the install
 and just prefix the command above with `uvx --with moshi-mlx`.
 </details>
 
+## FAQ
+
+Checkout the [Frequently Asked Questions](FAQ.md) section before opening an issue.
+
 ## License
 
 The present code is provided under the MIT license for the Python parts, and Apache license for the Rust backend.
