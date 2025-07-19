@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "moshi==0.2.10",
+#     "moshi==0.2.11",
 #     "torch",
 #     "sphn",
 #     "sounddevice",

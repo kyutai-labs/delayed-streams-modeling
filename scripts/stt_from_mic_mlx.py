@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "huggingface_hub",
-#     "moshi_mlx==0.2.10",
+#     "moshi_mlx==0.2.12",
 #     "numpy",
 #     "rustymimi",
 #     "sentencepiece",

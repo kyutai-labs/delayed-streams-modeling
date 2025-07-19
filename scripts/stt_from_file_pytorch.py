@@ -4,7 +4,7 @@
 #     "julius",
 #     "librosa",
 #     "soundfile",
-#     "moshi==0.2.9",
+#     "moshi==0.2.11",
 # ]
 # ///
 
