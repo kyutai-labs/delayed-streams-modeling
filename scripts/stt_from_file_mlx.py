@@ -24,13 +24,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("in_file", help="The file to transcribe.")
     parser.add_argument("--max-steps", default=4096)
-    parser.add_argument("--hf-repo", default="kyutai/stt-1b-en_fr-mlx")
+    parser.add_argument("--hf-repo")
     parser.add_argument(
         "--vad", action="store_true", help="Enable VAD (Voice Activity Detection)."
     )
     args = parser.parse_args()
 
     audio, _ = sphn.read(args.in_file, sample_rate=24000)
+    if args.hf_repo is None:
+        if args.vad:
+            args.hf_repo = "kyutai/stt-1b-en_fr-candle"
+        else:
+            args.hf_repo = "kyutai/stt-1b-en_fr-mlx"
     lm_config = hf_hub_download(args.hf_repo, "config.json")
     with open(lm_config, "r") as fobj:
         lm_config = json.load(fobj)

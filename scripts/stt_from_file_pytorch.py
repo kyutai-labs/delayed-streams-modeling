@@ -128,6 +128,9 @@ def tokens_to_timestamped_text(
 
 
 def main(args):
+    if args.vad and args.hf_repo is None:
+        args.hf_repo = "kyutai/stt-1b-en_fr-candle"
+
     info = moshi.models.loaders.CheckpointInfo.from_hf_repo(
         args.hf_repo,
         moshi_weights=args.moshi_weight,
