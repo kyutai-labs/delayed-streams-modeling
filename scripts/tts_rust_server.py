@@ -159,6 +159,7 @@ async def websocket_client():
 
     async with websockets.connect(uri, additional_headers=headers) as websocket:
         print("connected")
+
         async def send_loop():
             print("go send")
             async for line in get_lines(args.inp):
