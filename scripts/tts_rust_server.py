@@ -89,7 +89,6 @@ async def output_audio(out: str, output_queue: asyncio.Queue[np.ndarray | None])
         print(f"Saved audio to {out}")
 
 
-
 async def read_lines_from_stdin():
     reader = asyncio.StreamReader()
     protocol = asyncio.StreamReaderProtocol(reader)
