@@ -68,7 +68,10 @@ def main():
 
     # If you want to make a dialog, you can pass more than one turn [text_speaker_1, text_speaker_2, text_2_speaker_1, ...]
     entries = tts_model.prepare_script([text], padding_between=1)
-    voice_path = tts_model.get_voice_path(args.voice)
+    if args.voice.endswith(".safetensors"):
+        voice_path = args.voice
+    else:
+        voice_path = tts_model.get_voice_path(args.voice)
     # CFG coef goes here because the model was trained with CFG distillation,
     # so it's not _actually_ doing CFG at inference time.
     # Also, if you are generating a dialog, you should have two voices in the list.

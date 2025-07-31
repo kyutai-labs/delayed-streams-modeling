@@ -183,7 +183,10 @@ def main():
         checkpoint_info, n_q=32, temp=0.6, device=args.device
     )
 
-    voice_path = tts_model.get_voice_path(args.voice)
+    if args.voice.endswith(".safetensors"):
+        voice_path = args.voice
+    else:
+        voice_path = tts_model.get_voice_path(args.voice)
     # CFG coef goes here because the model was trained with CFG distillation,
     # so it's not _actually_ doing CFG at inference time.
     # Also, if you are generating a dialog, you should have two voices in the list.
