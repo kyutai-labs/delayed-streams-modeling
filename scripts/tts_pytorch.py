@@ -78,6 +78,7 @@ def main():
     condition_attributes = tts_model.make_condition_attributes(
         [voice_path], cfg_coef=2.0
     )
+    _frames_cnt = 0
 
     if args.out == "-":
         # Stream the audio to the speakers using sounddevice.
@@ -86,9 +87,12 @@ def main():
         pcms = queue.Queue()
 
         def _on_frame(frame):
+            nonlocal _frames_cnt
             if (frame != -1).all():
                 pcm = tts_model.mimi.decode(frame[:, 1:, :]).cpu().numpy()
                 pcms.put_nowait(np.clip(pcm[0, 0], -1, 1))
+                _frames_cnt += 1
+                print(f"generated {_frames_cnt / 12.5:.2f}s", end="\r", flush=True)
 
         def audio_callback(outdata, _a, _b, _c):
             try:
@@ -113,7 +117,16 @@ def main():
                     break
                 time.sleep(1)
     else:
-        result = tts_model.generate([entries], [condition_attributes])
+
+        def _on_frame(frame):
+            nonlocal _frames_cnt
+            if (frame != -1).all():
+                _frames_cnt += 1
+                print(f"generated {_frames_cnt / 12.5:.2f}s", end="\r", flush=True)
+
+        result = tts_model.generate(
+            [entries], [condition_attributes], on_frame=_on_frame
+        )
         with tts_model.mimi.streaming(1), torch.no_grad():
             pcms = []
             for frame in result.frames[tts_model.delay_steps :]:
