@@ -144,13 +144,17 @@ def main():
     ]
 
     wav_frames = queue.Queue()
+    _frames_cnt = 0
 
     def _on_frame(frame):
+        nonlocal _frames_cnt
         if (frame == -1).any():
             return
         _pcm = tts_model.mimi.decode_step(frame[:, :, None])
         _pcm = np.array(mx.clip(_pcm[0, 0], -1, 1))
         wav_frames.put_nowait(_pcm)
+        _frames_cnt += 1
+        print(f"generated {_frames_cnt / 12.5:.2f}s", end="\r", flush=True)
 
     def run():
         log("info", "starting the inference loop")
