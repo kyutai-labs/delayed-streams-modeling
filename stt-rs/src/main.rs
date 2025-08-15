@@ -5,6 +5,7 @@
 use anyhow::Result;
 use candle::{Device, Tensor};
 use clap::Parser;
+use std::collections::HashMap;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -14,6 +15,10 @@ struct Args {
     /// The repo where to get the model from.
     #[arg(long, default_value = "kyutai/stt-1b-en_fr-candle")]
     hf_repo: String,
+
+    /// Path to quantized model directory (if provided, uses quantized model instead of HF repo).
+    #[arg(long)]
+    quantized_model: Option<String>,
 
     /// Run the model on cpu.
     #[arg(long)]
@@ -120,6 +125,14 @@ struct Model {
 
 impl Model {
     fn load_from_hf(args: &Args, dev: &Device) -> Result<Self> {
+        if let Some(quantized_path) = &args.quantized_model {
+            Self::load_quantized(args, dev, quantized_path)
+        } else {
+            Self::load_standard(args, dev)
+        }
+    }
+
+    fn load_standard(args: &Args, dev: &Device) -> Result<Self> {
         let dtype = dev.bf16_default_to_f32();
 
         // Retrieve the model files from the Hugging Face Hub
@@ -141,6 +154,59 @@ impl Model {
         )?;
         let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
         let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
+        Ok(Model {
+            state,
+            config,
+            text_tokenizer,
+            timestamps: args.timestamps,
+            vad: args.vad,
+            dev: dev.clone(),
+        })
+    }
+
+    fn load_quantized(args: &Args, dev: &Device, quantized_path: &str) -> Result<Self> {
+        let dtype = dev.bf16_default_to_f32();
+        let path = std::path::Path::new(quantized_path);
+        
+        // Check if this is a safetensors file or a directory
+        let model_file = if path.is_file() && path.extension().map_or(false, |ext| ext == "safetensors") {
+            // Direct safetensors file
+            path.to_path_buf()
+        } else if path.is_dir() {
+            // Directory containing quantized_model.safetensors
+            let safetensors_file = path.join("quantized_model.safetensors");
+            if !safetensors_file.exists() {
+                eprintln!("Error: {} does not exist", safetensors_file.display());
+                eprintln!("Run: python scripts/quantize_model.py to generate the safetensors file");
+                return Err(anyhow::anyhow!("Quantized safetensors file not found"));
+            }
+            safetensors_file
+        } else {
+            return Err(anyhow::anyhow!("Invalid quantized model path: {}", quantized_path));
+        };
+
+        // For quantized models, we still need config and other files from HF
+        let api = hf_hub::api::sync::Api::new()?;
+        let repo = api.model(args.hf_repo.to_string());
+        let config_file = repo.get("config.json")?;
+        let config: Config = serde_json::from_str(&std::fs::read_to_string(&config_file)?)?;
+        let tokenizer_file = repo.get(&config.tokenizer_name)?;
+        let mimi_file = repo.get(&config.mimi_name)?;
+
+        let text_tokenizer = sentencepiece::SentencePieceProcessor::open(&tokenizer_file)?;
+        
+        // Load the dequantized model weights
+        let vb_lm = unsafe { candle_nn::VarBuilder::from_mmaped_safetensors(&[&model_file], dtype, dev)? };
+        let audio_tokenizer = moshi::mimi::load(mimi_file.to_str().unwrap(), Some(32), dev)?;
+        let lm = moshi::lm::LmModel::new(
+            &config.model_config(args.vad),
+            moshi::nn::MaybeQuantizedVarBuilder::Real(vb_lm),
+        )?;
+        let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
+        let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
+        
+        println!("Loaded quantized model from: {}", model_file.display());
+        
         Ok(Model {
             state,
             config,
