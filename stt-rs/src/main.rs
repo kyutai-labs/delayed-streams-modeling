@@ -124,7 +124,6 @@ struct Model {
 
 impl Model {
     fn load_from_hf(args: &Args, dev: &Device) -> Result<Self> {
-        let dtype = dev.bf16_default_to_f32();
         let path = std::path::Path::new(&args.quantized_model);
 
         // LM is quantized, currently load it from local file
@@ -150,8 +149,6 @@ impl Model {
         )?;
         let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
         let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
-
-        println!("Loaded quantized model from: {}", model_file.display());
 
         Ok(Model {
             state,
