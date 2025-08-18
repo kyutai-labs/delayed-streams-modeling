@@ -15,9 +15,9 @@ struct Args {
     #[arg(long, default_value = "kyutai/stt-1b-en_fr-candle")]
     hf_repo: String,
 
-    /// Path to quantized model directory (if provided, uses quantized model instead of HF repo).
-    #[arg(long, default_value = "scripts/moshi_stt_1b_uint8/model-q80.gguf")]
-    quantized_model: String,
+    /// Path to the model file in the repo.
+    #[arg(long, default_value = "model.safetensors")]
+    model_path: String,
 
     /// Run the model on cpu.
     #[arg(long)]
@@ -124,32 +124,41 @@ struct Model {
 
 impl Model {
     fn load_from_hf(args: &Args, dev: &Device) -> Result<Self> {
-        let path = std::path::Path::new(&args.quantized_model);
-
-        // LM is quantized, currently load it from local file
-        // Everything else (including mimi), we load from HF
-        let model_file = path.to_path_buf();
-
-        // For quantized models, we still need config and other files from HF
+        // Retrieve the model files from the Hugging Face Hub
         let api = hf_hub::api::sync::Api::new()?;
         let repo = api.model(args.hf_repo.to_string());
         let config_file = repo.get("config.json")?;
         let config: Config = serde_json::from_str(&std::fs::read_to_string(&config_file)?)?;
         let tokenizer_file = repo.get(&config.tokenizer_name)?;
+        let model_file = repo.get(&args.model_path)?;
         let mimi_file = repo.get(&config.mimi_name)?;
+        let is_quantized = model_file.to_str().unwrap().ends_with(".gguf");
 
         let text_tokenizer = sentencepiece::SentencePieceProcessor::open(&tokenizer_file)?;
 
-        let vb_lm =
-            candle_transformers::quantized_var_builder::VarBuilder::from_gguf(&model_file, dev)?;
+        let lm = if is_quantized {
+            let vb_lm = candle_transformers::quantized_var_builder::VarBuilder::from_gguf(
+                &model_file,
+                dev,
+            )?;
+            moshi::lm::LmModel::new(
+                &config.model_config(args.vad),
+                moshi::nn::MaybeQuantizedVarBuilder::Quantized(vb_lm),
+            )?
+        } else {
+            let dtype = dev.bf16_default_to_f32();
+            let vb_lm = unsafe {
+                candle_nn::VarBuilder::from_mmaped_safetensors(&[&model_file], dtype, dev)?
+            };
+            moshi::lm::LmModel::new(
+                &config.model_config(args.vad),
+                moshi::nn::MaybeQuantizedVarBuilder::Real(vb_lm),
+            )?
+        };
+
         let audio_tokenizer = moshi::mimi::load(mimi_file.to_str().unwrap(), Some(32), dev)?;
-        let lm = moshi::lm::LmModel::new(
-            &config.model_config(args.vad),
-            moshi::nn::MaybeQuantizedVarBuilder::Quantized(vb_lm),
-        )?;
         let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
         let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
-
         Ok(Model {
             state,
             config,
