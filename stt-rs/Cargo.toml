@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1.0"
 candle = { version = "0.9.1",  package = "candle-core" }
 candle-nn = "0.9.1"
+candle-transformers = "0.9.1"
 clap = { version = "4.4.12", features = ["derive"] }
 hf-hub = "0.4.3"
 kaudio = "0.2.1"

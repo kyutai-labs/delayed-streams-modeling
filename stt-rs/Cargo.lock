@@ -1427,6 +1427,7 @@ dependencies = [
  "anyhow",
  "candle-core",
  "candle-nn",
+ "candle-transformers",
  "clap",
  "hf-hub",
  "kaudio",

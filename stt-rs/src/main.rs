@@ -5,7 +5,6 @@
 use anyhow::Result;
 use candle::{Device, Tensor};
 use clap::Parser;
-use std::collections::HashMap;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -17,10 +16,7 @@ struct Args {
     hf_repo: String,
 
     /// Path to quantized model directory (if provided, uses quantized model instead of HF repo).
-    #[arg(
-        long,
-        default_value = "scripts/moshi_stt_1b_uint8/quantized_model.safetensors"
-    )]
+    #[arg(long, default_value = "scripts/moshi_stt_1b_uint8/model-q80.gguf")]
     quantized_model: String,
 
     /// Run the model on cpu.
@@ -146,11 +142,11 @@ impl Model {
         let text_tokenizer = sentencepiece::SentencePieceProcessor::open(&tokenizer_file)?;
 
         let vb_lm =
-            unsafe { candle_nn::VarBuilder::from_mmaped_safetensors(&[&model_file], dtype, dev)? };
+            candle_transformers::quantized_var_builder::VarBuilder::from_gguf(&model_file, dev)?;
         let audio_tokenizer = moshi::mimi::load(mimi_file.to_str().unwrap(), Some(32), dev)?;
         let lm = moshi::lm::LmModel::new(
             &config.model_config(args.vad),
-            moshi::nn::MaybeQuantizedVarBuilder::Real(vb_lm),
+            moshi::nn::MaybeQuantizedVarBuilder::Quantized(vb_lm),
         )?;
         let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
         let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
