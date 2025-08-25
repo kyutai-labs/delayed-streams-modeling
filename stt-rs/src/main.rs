@@ -204,6 +204,7 @@ impl Model {
                     }
                     moshi::asr::AsrMsg::EndWord { stop_time, .. } => {
                         printed_eot = false;
+                        #[allow(clippy::collapsible_if)]
                         if self.timestamps {
                             if let Some((word, start_time)) = last_word.take() {
                                 println!("[{start_time:5.2}-{stop_time:5.2}] {word}");
