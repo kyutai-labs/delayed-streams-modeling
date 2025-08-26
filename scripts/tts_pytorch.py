@@ -117,16 +117,12 @@ def main():
                     break
                 time.sleep(1)
     else:
-        last_time = time.time()
-
         def _on_frame(frame):
             nonlocal _frames_cnt
             nonlocal last_time
             if (frame != -1).all():
                 _frames_cnt += 1
                 print(f"generated {_frames_cnt / 12.5:.2f}s", end="\r", flush=True)
-            print("{}", time.time() - last_time)
-            last_time = time.time()
 
         start_time = time.time()
         result = tts_model.generate(
