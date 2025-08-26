@@ -120,7 +120,6 @@ def main():
 
         def _on_frame(frame):
             nonlocal _frames_cnt
-            nonlocal last_time
             if (frame != -1).all():
                 _frames_cnt += 1
                 print(f"generated {_frames_cnt / 12.5:.2f}s", end="\r", flush=True)
