@@ -117,6 +117,7 @@ def main():
                     break
                 time.sleep(1)
     else:
+
         def _on_frame(frame):
             nonlocal _frames_cnt
             nonlocal last_time
