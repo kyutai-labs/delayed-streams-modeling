@@ -1,4 +1,18 @@
 repos:
+  - repo: local
+    hooks:
+    - id: ruff
+      name: ruff
+      language: system
+      entry: bash -c 'uvx ruff check'
+      pass_filenames: false
+      always_run: true
+    - id: ruff-format
+      name: ruff format
+      language: system
+      entry: bash -c 'uvx ruff format --check'
+      pass_filenames: false
+      always_run: true
     # Get rid of Jupyter Notebook output because we don't want to keep it in Git
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
