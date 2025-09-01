@@ -131,7 +131,7 @@ def main():
             print("Enter text to synthesize (Ctrl+D to end input):")
         text_to_tts = sys.stdin.read().strip()
     else:
-        with open(args.inp, "r") as fobj:
+        with open(args.inp, "r", encoding="utf-8") as fobj:
             text_to_tts = fobj.read().strip()
 
     all_entries = [tts_model.prepare_script([text_to_tts])]

@@ -63,7 +63,7 @@ def main():
             print("Enter text to synthesize (Ctrl+D to end input):")
         text = sys.stdin.read().strip()
     else:
-        with open(args.inp, "r") as fobj:
+        with open(args.inp, "r", encoding="utf-8") as fobj:
             text = fobj.read().strip()
 
     # If you want to make a dialog, you can pass more than one turn [text_speaker_1, text_speaker_2, text_2_speaker_1, ...]
