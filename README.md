@@ -328,3 +328,18 @@ pre-commit install
 ```
 
 If you're using `uv`, you can replace the two commands with `uvx pre-commit install`.
+
+## Citation
+
+Please cite the following paper.
+```
+@techreport{kyutai2025streaming,
+      title={Streaming Sequence-to-Sequence Learning with Delayed Streams Modeling}, 
+      author={Neil Zeghidour and Eugene Kharitonov and Manu Orsini and Václav Volhejn and Gabriel de Marmiesse and Edouard Grave and Patrick Pérez and Laurent Mazaré and Alexandre Défossez},
+      year={2025},
+      eprint={2509.08753},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2509.08753}, 
+}
+```
