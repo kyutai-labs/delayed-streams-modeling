@@ -16,7 +16,6 @@ from urllib.parse import urlencode
 
 import msgpack
 import numpy as np
-import sounddevice as sd
 import sphn
 import tqdm
 import websockets
@@ -52,6 +51,10 @@ async def receive_messages(websocket: websockets.ClientConnection, output_queue)
 
 async def output_audio(out: str, output_queue: asyncio.Queue[np.ndarray | None]):
     if out == "-":
+        # This will fail with "OSError: PortAudio library not found" on servers with no
+        # audio output, so only import if the user requests it.
+        import sounddevice as sd
+
         should_exit = False
 
         def audio_callback(outdata, _a, _b, _c):
@@ -157,6 +160,10 @@ async def websocket_client():
             print("Enter text to synthesize (Ctrl+D to end input):")
     headers = {"kyutai-api-key": args.api_key}
 
+    # For clients that don't support the `additional_headers` parameter when connecting
+    # (notably: JS libraries like react-use-websocket),
+    # you can also provide the API key in the query string with the "auth_id" key,
+    # i.e. adding "&auth_id=public_token" at the end of `uri`
     async with websockets.connect(uri, additional_headers=headers) as websocket:
         print("connected")
 

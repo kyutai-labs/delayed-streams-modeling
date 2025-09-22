@@ -276,6 +276,8 @@ echo "Hey, how are you?" | python scripts/tts_rust_server.py - -
 # From text file to audio file
 python scripts/tts_rust_server.py text_to_say.txt audio_output.wav
 ```
+
+You can configure the server by modifying `configs/config-tts.toml`. See comments in that file to see what options are available.
 </details>
 
 <details>

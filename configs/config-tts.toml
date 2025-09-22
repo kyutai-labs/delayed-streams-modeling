@@ -1,20 +1,50 @@
 static_dir = "./static/"
 log_dir = "$HOME/tmp/tts-logs"
+# Used to identify the server when logging.
 instance_name = "tts"
+# Simple security: require clients to provide an auth token when connecting.
+# It can be set by setting auth_id to the query string, e.g.
+# "localhost:8089/api/tts_streaming?auth_id=public_token"
+# or by setting the kyutai-api-key HTTP header, see the tts_rust_server.py example.
 authorized_ids = ["public_token"]
 
 [modules.tts_py]
 type = "Py"
+# Under which path should the TTS be available? This is relevant because the server
+# can run STT at the same time.
 path = "/api/tts_streaming"
 text_tokenizer_file = "hf://kyutai/tts-1.6b-en_fr/tokenizer_spm_8k_en_fr_audio.model"
-batch_size = 8  # Adjust to your GPU memory capacity
+# Batch size determines how many parallel connections can the server handle.
+# Higher values mean slower inference. Adjust to your GPU memory capacity.
+batch_size = 8
 text_bos_token = 1
 
 [modules.tts_py.py]
 log_folder = "$HOME/tmp/moshi-server-logs"
+# The folder to read voices from. Can be a local directory, or a Hugging Face repo
+# using the "hf-snapshot://" prefix. We use a glob to only download the .safetensors files
+# with voice embeddings since the repo also contains .wav files we don't need.
 voice_folder = "hf-snapshot://kyutai/tts-voices/**/*.safetensors"
+# This voice will be used if the user doesn't specify one, or selects a non-existent one.
+# This usually means something is wrong, so here we set it to a strange voice to make it clear
+# that something is off.
+# Relative to the voice folder.
 default_voice = "unmute-prod-website/default_voice.wav"
+# Classifier-free guidance coefficient. 
+# The default model, "tts-1.6b-en_fr", is trained with CFG distillation, which means it learns
+# to mimic CFG behavior during training, and this parameter is ignored.
+# For other models, a higher CFG value makes them adhere to the voice more
+# closely, but makes them more likely to make mistakes like inserting words that
+# aren't in the script.
+# See: https://arxiv.org/abs/2207.12598
+
 cfg_coef = 2.0
 cfg_is_no_text = true
 padding_between = 1
+# Number of quantization levels for the residual vector quantizer.
+# Higher means better sounding audio but longer inference.
+# The maximum is typically 32, reasonable values are 8-32.
 n_q = 24
+# Make the model speak faster or slower by changing how likely it is to sample the padding token.
+# Should be between -2 and 2, with positive values leading to slower speech.
+padding_bonus = 0
