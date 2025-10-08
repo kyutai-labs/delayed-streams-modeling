@@ -2,259 +2,270 @@
 // This source code is licensed under the license found in the
 // LICENSE file in the root directory of this source tree.
 
-use anyhow::Result;
-use candle::{Device, Tensor};
-use clap::Parser;
+"""
+Real-time Speech-to-Text Transcription Application
 
-#[derive(Debug, Parser)]
-struct Args {
-    /// The audio input file, in wav/mp3/ogg/... format.
-    in_file: String,
+This application performs real-time speech-to-text transcription using the Moshi model
+from Kyutai Labs. It captures audio from the microphone, processes it through an audio
+tokenizer (Mimi), and uses a language model to generate text transcriptions.
 
-    /// The repo where to get the model from.
-    #[arg(long, default_value = "kyutai/stt-1b-en_fr-candle")]
-    hf_repo: String,
+Features:
+- Real-time audio capture and transcription
+- Support for English and French languages
+- Optional Voice Activity Detection (VAD) to detect end of speech
+- Uses MLX framework for efficient inference on Apple Silicon
+- Model quantization support (4-bit and 8-bit)
 
-    /// Path to the model file in the repo.
-    #[arg(long, default_value = "model.safetensors")]
-    model_path: String,
+Requirements:
+- Python 3.12+
+- Apple Silicon Mac (for MLX support)
+- Microphone for audio input
+- ~2.5GB RAM for model inference
+- ~2.1GB disk space for model cache
 
-    /// Run the model on cpu.
-    #[arg(long)]
-    cpu: bool,
+Usage:
+    # Basic usage with MLX model
+    python app.py
+    
+    # With Voice Activity Detection
+    python app.py --vad
+    
+    # Custom max steps
+    python app.py --max-steps 8192
+    
+    # Custom HuggingFace repository
+    python app.py --hf-repo kyutai/stt-1b-en_fr-mlx
+"""
 
-    /// Display word level timestamps.
-    #[arg(long)]
-    timestamps: bool,
+import argparse
+import json
+import queue
 
-    /// Display the level of voice activity detection (VAD).
-    #[arg(long)]
-    vad: bool,
-}
+# MLX framework for efficient Apple Silicon inference
+import mlx.core as mx
+import mlx.nn as nn
+# Audio tokenizer (Mimi) for encoding audio into discrete tokens
+import rustymimi
+# Text tokenizer for converting token IDs to text pieces
+import sentencepiece
+# Audio I/O library for microphone input
+import sounddevice as sd
+# HuggingFace Hub for downloading model files
+from huggingface_hub import hf_hub_download
+# Moshi model and utilities
+from moshi_mlx import models, utils
 
-fn device(cpu: bool) -> Result<Device> {
-    if cpu {
-        Ok(Device::Cpu)
-    } else if candle::utils::cuda_is_available() {
-        Ok(Device::new_cuda(0)?)
-    } else if candle::utils::metal_is_available() {
-        Ok(Device::new_metal(0)?)
-    } else {
-        Ok(Device::Cpu)
-    }
-}
+if __name__ == "__main__":
+    # ============================================================================
+    # ARGUMENT PARSING
+    # ============================================================================
+    print("Starting app.py...")
+    parser = argparse.ArgumentParser()
+    # Maximum number of generation steps (affects how long the model will run)
+    parser.add_argument("--max-steps", default=4096)
+    # HuggingFace repository containing the model files
+    parser.add_argument("--hf-repo")
+    # Enable Voice Activity Detection to detect when user stops speaking
+    parser.add_argument(
+        "--vad", action="store_true", help="Enable VAD (Voice Activity Detection)."
+    )
+    args = parser.parse_args()
+    print(f"Arguments parsed: max_steps={args.max_steps}, vad={args.vad}, hf_repo={args.hf_repo}")
 
-#[derive(Debug, serde::Deserialize)]
-struct SttConfig {
-    audio_silence_prefix_seconds: f64,
-    audio_delay_seconds: f64,
-}
+    # ============================================================================
+    # MODEL FILE DOWNLOAD/LOCATION
+    # ============================================================================
+    # Select default repository based on VAD flag
+    # - MLX models are optimized for Apple Silicon
+    # - Candle models are PyTorch-based and used when VAD is enabled
+    if args.hf_repo is None:
+        if args.vad:
+            args.hf_repo = "kyutai/stt-1b-en_fr-candle"
+        else:
+            args.hf_repo = "kyutai/stt-1b-en_fr-mlx"
+    print(f"Using HuggingFace repo: {args.hf_repo}")
+    
+    # Download or locate model configuration file (~1.2KB)
+    print("Downloading config.json...")
+    lm_config = hf_hub_download(args.hf_repo, "config.json")
+    print("Config downloaded, loading...")
+    with open(lm_config, "r") as fobj:
+        lm_config = json.load(fobj)
+    
+    # Download or locate Mimi audio tokenizer weights (~367MB)
+    # Mimi encodes raw audio into discrete tokens
+    print(f"Downloading mimi weights: {lm_config['mimi_name']}...")
+    mimi_weights = hf_hub_download(args.hf_repo, lm_config["mimi_name"])
+    
+    # Download or locate Moshi language model weights (~1.8GB)
+    # This is the main speech-to-text model
+    moshi_name = lm_config.get("moshi_name", "model.safetensors")
+    print(f"Downloading moshi weights: {moshi_name}...")
+    moshi_weights = hf_hub_download(args.hf_repo, moshi_name)
+    
+    # Download or locate text tokenizer (~118KB)
+    # Converts token IDs to text pieces
+    print(f"Downloading tokenizer: {lm_config['tokenizer_name']}...")
+    tokenizer = hf_hub_download(args.hf_repo, lm_config["tokenizer_name"])
 
-#[derive(Debug, serde::Deserialize)]
-struct Config {
-    mimi_name: String,
-    tokenizer_name: String,
-    card: usize,
-    text_card: usize,
-    dim: usize,
-    n_q: usize,
-    context: usize,
-    max_period: f64,
-    num_heads: usize,
-    num_layers: usize,
-    causal: bool,
-    stt_config: SttConfig,
-}
+    # ============================================================================
+    # MODEL INITIALIZATION
+    # ============================================================================
+    # Create model configuration from downloaded JSON
+    print("Creating model configuration...")
+    lm_config = models.LmConfig.from_config_dict(lm_config)
+    
+    # Initialize the Moshi language model structure
+    # This creates the neural network layers but doesn't load weights yet
+    print("Initializing model...")
+    model = models.Lm(lm_config)
+    
+    # Set model to use bfloat16 precision for efficient inference
+    # bfloat16 reduces memory usage while maintaining good accuracy
+    model.set_dtype(mx.bfloat16)
+    
+    # Apply quantization if the model file indicates it
+    # Quantization reduces model size and speeds up inference
+    if moshi_weights.endswith(".q4.safetensors"):
+        # 4-bit quantization: smallest size, fastest inference, slight accuracy loss
+        print("Quantizing model to 4-bit...")
+        nn.quantize(model, bits=4, group_size=32)
+    elif moshi_weights.endswith(".q8.safetensors"):
+        # 8-bit quantization: balanced size/speed/accuracy
+        print("Quantizing model to 8-bit...")
+        nn.quantize(model, bits=8, group_size=64)
 
-impl Config {
-    fn model_config(&self, vad: bool) -> moshi::lm::Config {
-        let lm_cfg = moshi::transformer::Config {
-            d_model: self.dim,
-            num_heads: self.num_heads,
-            num_layers: self.num_layers,
-            dim_feedforward: self.dim * 4,
-            causal: self.causal,
-            norm_first: true,
-            bias_ff: false,
-            bias_attn: false,
-            layer_scale: None,
-            context: self.context,
-            max_period: self.max_period as usize,
-            use_conv_block: false,
-            use_conv_bias: true,
-            cross_attention: None,
-            gating: Some(candle_nn::Activation::Silu),
-            norm: moshi::NormType::RmsNorm,
-            positional_embedding: moshi::transformer::PositionalEmbedding::Rope,
-            conv_layout: false,
-            conv_kernel_size: 3,
-            kv_repeat: 1,
-            max_seq_len: 4096 * 4,
-            shared_cross_attn: false,
-        };
-        let extra_heads = if vad {
-            Some(moshi::lm::ExtraHeadsConfig {
-                num_heads: 4,
-                dim: 6,
-            })
-        } else {
-            None
-        };
-        moshi::lm::Config {
-            transformer: lm_cfg,
-            depformer: None,
-            audio_vocab_size: self.card + 1,
-            text_in_vocab_size: self.text_card + 1,
-            text_out_vocab_size: self.text_card,
-            audio_codebooks: self.n_q,
-            conditioners: Default::default(),
-            extra_heads,
-        }
-    }
-}
+    # Load the actual model weights from disk into memory
+    # This step is CPU/memory intensive and may take 30-60 seconds
+    print(f"loading model weights from {moshi_weights}")
+    if args.hf_repo.endswith("-candle"):
+        # Load PyTorch-format weights (for Candle models)
+        model.load_pytorch_weights(moshi_weights, lm_config, strict=True)
+    else:
+        # Load MLX-format weights (for MLX models)
+        model.load_weights(moshi_weights, strict=True)
 
-struct Model {
-    state: moshi::asr::State,
-    text_tokenizer: sentencepiece::SentencePieceProcessor,
-    timestamps: bool,
-    vad: bool,
-    config: Config,
-    dev: Device,
-}
+    # ============================================================================
+    # TOKENIZER INITIALIZATION
+    # ============================================================================
+    # Initialize text tokenizer (SentencePiece) for decoding text tokens
+    # Converts integer token IDs to readable text pieces
+    print(f"loading the text tokenizer from {tokenizer}")
+    text_tokenizer = sentencepiece.SentencePieceProcessor(tokenizer)  # type: ignore
 
-impl Model {
-    fn load_from_hf(args: &Args, dev: &Device) -> Result<Self> {
-        // Retrieve the model files from the Hugging Face Hub
-        let api = hf_hub::api::sync::Api::new()?;
-        let repo = api.model(args.hf_repo.to_string());
-        let config_file = repo.get("config.json")?;
-        let config: Config = serde_json::from_str(&std::fs::read_to_string(&config_file)?)?;
-        let tokenizer_file = repo.get(&config.tokenizer_name)?;
-        let model_file = repo.get(&args.model_path)?;
-        let mimi_file = repo.get(&config.mimi_name)?;
-        let is_quantized = model_file.to_str().unwrap().ends_with(".gguf");
+    # Initialize audio tokenizer (Mimi) for encoding audio
+    # Converts raw audio waveforms into discrete tokens
+    print(f"loading the audio tokenizer {mimi_weights}")
+    generated_codebooks = lm_config.generated_codebooks
+    other_codebooks = lm_config.other_codebooks
+    mimi_codebooks = max(generated_codebooks, other_codebooks)
+    audio_tokenizer = rustymimi.Tokenizer(mimi_weights, num_codebooks=mimi_codebooks)  # type: ignore
+    
+    # ============================================================================
+    # MODEL WARMUP AND GENERATION SETUP
+    # ============================================================================
+    # Run warmup to compile/optimize the model for faster inference
+    # This runs a few test inferences to optimize the computation graph
+    print("warming up the model")
+    model.warmup()
+    
+    # Create generation manager with sampling parameters
+    gen = models.LmGen(
+        model=model,
+        max_steps=args.max_steps,
+        # Text sampling: use top-k=25 with temperature=0 (deterministic)
+        text_sampler=utils.Sampler(top_k=25, temp=0),
+        # Audio sampling: use top-k=250 with temperature=0.8 (more diverse)
+        audio_sampler=utils.Sampler(top_k=250, temp=0.8),
+        check=False,
+    )
 
-        let text_tokenizer = sentencepiece::SentencePieceProcessor::open(&tokenizer_file)?;
+    # ============================================================================
+    # AUDIO STREAMING SETUP
+    # ============================================================================
+    # Create a queue to pass audio data from the callback to the main loop
+    # Thread-safe queue allows audio callback to run on separate thread
+    block_queue = queue.Queue()
 
-        let lm = if is_quantized {
-            let vb_lm = candle_transformers::quantized_var_builder::VarBuilder::from_gguf(
-                &model_file,
-                dev,
-            )?;
-            moshi::lm::LmModel::new(
-                &config.model_config(args.vad),
-                moshi::nn::MaybeQuantizedVarBuilder::Quantized(vb_lm),
-            )?
-        } else {
-            let dtype = dev.bf16_default_to_f32();
-            let vb_lm = unsafe {
-                candle_nn::VarBuilder::from_mmaped_safetensors(&[&model_file], dtype, dev)?
-            };
-            moshi::lm::LmModel::new(
-                &config.model_config(args.vad),
-                moshi::nn::MaybeQuantizedVarBuilder::Real(vb_lm),
-            )?
-        };
+    def audio_callback(indata, _frames, _time, _status):
+        """
+        Audio callback function called by sounddevice for each audio block.
+        
+        Args:
+            indata: Audio data as numpy array (frames x channels)
+            _frames: Number of frames (unused)
+            _time: Time information (unused)
+            _status: Status flags (unused)
+        """
+        # Copy audio data to queue for processing in main loop
+        # Copy is needed because buffer may be reused
+        block_queue.put(indata.copy())
 
-        let audio_tokenizer = moshi::mimi::load(mimi_file.to_str().unwrap(), Some(32), dev)?;
-        let asr_delay_in_tokens = (config.stt_config.audio_delay_seconds * 12.5) as usize;
-        let state = moshi::asr::State::new(1, asr_delay_in_tokens, 0., audio_tokenizer, lm)?;
-        Ok(Model {
-            state,
-            config,
-            text_tokenizer,
-            timestamps: args.timestamps,
-            vad: args.vad,
-            dev: dev.clone(),
-        })
-    }
-
-    fn run(&mut self, mut pcm: Vec<f32>) -> Result<()> {
-        use std::io::Write;
-
-        // Add the silence prefix to the audio.
-        if self.config.stt_config.audio_silence_prefix_seconds > 0.0 {
-            let silence_len =
-                (self.config.stt_config.audio_silence_prefix_seconds * 24000.0) as usize;
-            pcm.splice(0..0, vec![0.0; silence_len]);
-        }
-        // Add some silence at the end to ensure all the audio is processed.
-        let suffix = (self.config.stt_config.audio_delay_seconds * 24000.0) as usize;
-        pcm.resize(pcm.len() + suffix + 24000, 0.0);
-
-        let mut last_word = None;
-        let mut printed_eot = false;
-        for pcm in pcm.chunks(1920) {
-            let pcm = Tensor::new(pcm, &self.dev)?.reshape((1, 1, ()))?;
-            let asr_msgs = self.state.step_pcm(pcm, None, &().into(), |_, _, _| ())?;
-            for asr_msg in asr_msgs.iter() {
-                match asr_msg {
-                    moshi::asr::AsrMsg::Step { prs, .. } => {
-                        // prs is the probability of having no voice activity for different time
-                        // horizons.
-                        // In kyutai/stt-1b-en_fr-candle, these horizons are 0.5s, 1s, 2s, and 3s.
-                        if self.vad && prs[2][0] > 0.5 && !printed_eot {
-                            printed_eot = true;
-                            if !self.timestamps {
-                                print!(" <endofturn pr={}>", prs[2][0]);
-                            } else {
-                                println!("<endofturn pr={}>", prs[2][0]);
-                            }
-                        }
-                    }
-                    moshi::asr::AsrMsg::EndWord { stop_time, .. } => {
-                        printed_eot = false;
-                        #[allow(clippy::collapsible_if)]
-                        if self.timestamps {
-                            if let Some((word, start_time)) = last_word.take() {
-                                println!("[{start_time:5.2}-{stop_time:5.2}] {word}");
-                            }
-                        }
-                    }
-                    moshi::asr::AsrMsg::Word {
-                        tokens, start_time, ..
-                    } => {
-                        printed_eot = false;
-                        let word = self
-                            .text_tokenizer
-                            .decode_piece_ids(tokens)
-                            .unwrap_or_else(|_| String::new());
-                        if !self.timestamps {
-                            print!(" {word}");
-                            std::io::stdout().flush()?
-                        } else {
-                            if let Some((word, prev_start_time)) = last_word.take() {
-                                println!("[{prev_start_time:5.2}-{start_time:5.2}] {word}");
-                            }
-                            last_word = Some((word, *start_time));
-                        }
-                    }
-                }
-            }
-        }
-        if let Some((word, start_time)) = last_word.take() {
-            println!("[{start_time:5.2}-     ] {word}");
-        }
-        println!();
-        Ok(())
-    }
-}
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-    let device = device(args.cpu)?;
-    println!("Using device: {:?}", device);
-
-    println!("Loading audio file from: {}", args.in_file);
-    let (pcm, sample_rate) = kaudio::pcm_decode(&args.in_file)?;
-    let pcm = if sample_rate != 24_000 {
-        kaudio::resample(&pcm, sample_rate as usize, 24_000)?
-    } else {
-        pcm
-    };
-    println!("Loading model from repository: {}", args.hf_repo);
-    let mut model = Model::load_from_hf(&args, &device)?;
-    println!("Running inference");
-    model.run(pcm)?;
-    Ok(())
-}
+    # ============================================================================
+    # REAL-TIME TRANSCRIPTION LOOP
+    # ============================================================================
+    print("recording audio from microphone, speak to get your words transcribed")
+    last_print_was_vad = False
+    
+    # Open audio input stream with 24kHz mono audio
+    # blocksize=1920 means 80ms of audio per block (1920/24000 = 0.08s)
+    with sd.InputStream(
+        channels=1,          # Mono audio
+        dtype="float32",     # 32-bit floating point samples
+        samplerate=24000,    # 24kHz sample rate (required by Mimi)
+        blocksize=1920,      # 80ms blocks for low latency
+        callback=audio_callback,
+    ):
+        # Main processing loop - runs indefinitely until interrupted (Ctrl+C)
+        while True:
+            # Get next audio block from queue (blocks if queue is empty)
+            block = block_queue.get()
+            
+            # Reshape audio: add batch dimension and remove channel dimension
+            # Shape: (frames,) -> (1, frames)
+            block = block[None, :, 0]
+            
+            # Encode audio to tokens using Mimi audio tokenizer
+            # This converts raw audio waveform to discrete tokens
+            other_audio_tokens = audio_tokenizer.encode_step(block[None, 0:1])
+            
+            # Convert to MLX array and transpose to expected shape
+            # Extract only the codebooks we need (other_codebooks)
+            other_audio_tokens = mx.array(other_audio_tokens).transpose(0, 2, 1)[
+                :, :, :other_codebooks
+            ]
+            
+            # Run model inference to get text token
+            if args.vad:
+                # VAD mode: also get Voice Activity Detection heads
+                text_token, vad_heads = gen.step_with_extra_heads(other_audio_tokens[0])
+                if vad_heads:
+                    # Check VAD probability (> 0.5 means end of speech detected)
+                    pr_vad = vad_heads[2][0, 0, 0].item()
+                    if pr_vad > 0.5 and not last_print_was_vad:
+                        print(" [end of turn detected]")
+                        last_print_was_vad = True
+            else:
+                # Normal mode: just get text token
+                text_token = gen.step(other_audio_tokens[0])
+            
+            # Extract text token ID from tensor
+            text_token = text_token[0].item()
+            
+            # Get generated audio tokens (for future use if needed)
+            audio_tokens = gen.last_audio_tokens()
+            
+            # Decode and print text if token is not special token
+            # Token 0: padding, Token 3: end-of-sequence
+            _text = None
+            if text_token not in (0, 3):
+                # Convert token ID to text piece using SentencePiece
+                _text = text_tokenizer.id_to_piece(text_token)  # type: ignore
+                
+                # Replace SentencePiece underscore with space
+                # SentencePiece uses ▁ to represent spaces
+                _text = _text.replace("▁", " ")
+                
+                # Print text without newline for streaming output
+                print(_text, end="", flush=True)
+                last_print_was_vad = False
