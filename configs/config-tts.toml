@@ -30,16 +30,26 @@ voice_folder = "hf-snapshot://kyutai/tts-voices/**/*.safetensors"
 # that something is off.
 # Relative to the voice folder.
 default_voice = "unmute-prod-website/default_voice.wav"
-# Classifier-free guidance coefficient. 
-# The default model, "tts-1.6b-en_fr", is trained with CFG distillation, which means it learns
-# to mimic CFG behavior during training, and this parameter is ignored.
-# For other models, a higher CFG value makes them adhere to the voice more
-# closely, but makes them more likely to make mistakes like inserting words that
-# aren't in the script.
-# See: https://arxiv.org/abs/2207.12598
 
+# Classifier-free guidance coefficient (see https://arxiv.org/abs/2207.12598).
+# TLDR: A higher CFG value makes the model adhere to the voice more closely,
+# but it can affect audio quality and make it more likely to make mistakes
+# like inserting words that aren't in the script.
+# Technical details:
+# CFG has the disadvantage of increasing inference time, because you need to run the model
+# twice for each step (once with the voice embedding, once without).
+# The default model, "tts-1.6b-en_fr", is trained with CFG distillation, which means it learns
+# to mimic CFG with different coefs during training, without actually using CFG at inference time.
+# These is only a fixed set of CFG coefs the model was trained with, so using a different value
+# will not work. The recommended value for this model is 2.0.
 cfg_coef = 2.0
+
+# Whether the unconditioned branch of the CFG should still have text conditioning or not.
+# Typically, no need to touch this.
 cfg_is_no_text = true
+
+# Number of padding frames to force between words. Will make the model articulate
+# a bit better with values such as 1.
 padding_between = 1
 # Number of quantization levels for the residual vector quantizer.
 # Higher means better sounding audio but longer inference.
