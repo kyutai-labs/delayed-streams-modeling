@@ -514,10 +514,12 @@ impl AppStateInner {
                     tracing::info!("disabling CUDA event tracking");
                     d.disable_event_tracking();
                 }
+                /*
                 if args.enable_tf32 {
                     tracing::info!("enabling TF32");
                     d.set_tf32(true);
                 }
+                */
             }
         };
 

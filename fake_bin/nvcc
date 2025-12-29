@@ -1,0 +1,11 @@
+#!/bin/bash
+if [[ "$*" == *"--version"* ]]; then
+    echo "nvcc: NVIDIA (R) Cuda compiler driver"
+    echo "Copyright (c) 2005-2023 NVIDIA Corporation"
+    echo "Built on Tue_Jul_11_20:56:05_PDT_2023"
+    echo "Cuda compilation tools, release 12.9, V12.9.140"
+    echo "Build cuda_12.9.r12.9/compiler.33039272_0"
+else
+    # Fallback to the real nvcc for actual compilation
+    exec /usr/local/cuda/bin/nvcc "$@"
+fi

@@ -7,6 +7,19 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 SENTENCEPIECE_PREFIX="${SENTENCEPIECE_PREFIX:-$HOME/.local/sentencepiece}"
 PKGCONFIG_DIR="${SENTENCEPIECE_PREFIX}/lib/pkgconfig"
 
+maybe_setup_cuda_env() {
+  local nvcc_bin=""
+  if command -v nvcc >/dev/null 2>&1; then
+    nvcc_bin="$(command -v nvcc)"
+  elif [[ -x /usr/local/cuda/bin/nvcc ]]; then
+    nvcc_bin="/usr/local/cuda/bin/nvcc"
+  fi
+
+  if [[ -n "$nvcc_bin" ]] && "$nvcc_bin" --version 2>/dev/null | grep -q "release 13.1"; then
+    source "$SCRIPT_DIR/setup_env.sh"
+  fi
+}
+
 trim() {
   local s="$1"
   s="${s#"${s%%[![:space:]]*}"}"
@@ -76,6 +89,7 @@ if ! pkg-config --exists sentencepiece 2>/dev/null; then
   export LD_LIBRARY_PATH="${SENTENCEPIECE_PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 fi
 
+maybe_setup_cuda_env
 maybe_free_gpu_memory
 
 cargo install --path "${REPO_ROOT}/server/rust/moshi/moshi-server" --features cuda --verbose

@@ -149,6 +149,106 @@ impl State {
         Tensor::from_vec(text_tokens, (batch_size, 1), dev)
     }
 
+    pub fn step_tokens_start(
+        &mut self,
+        audio_tokens: &Tensor,
+        conditions: Option<&crate::conditioner::Condition>,
+        mask: &crate::StreamMask,
+    ) -> Result<(Tensor, Tensor)> {
+        let (batch_size, codebooks, steps) = audio_tokens.dims3()?;
+        if steps != 1 {
+            candle::bail!("step_tokens_start only supports steps=1");
+        }
+        if batch_size != self.batch_size() {
+            candle::bail!("batch size mismatch: {batch_size} != {}", self.batch_size());
+        }
+
+        let audio_tokens_vec = audio_tokens.reshape((batch_size, codebooks))?.to_vec2::<u32>()?;
+        let mut audio_tokens_tensors = Vec::with_capacity(codebooks);
+        for codebook_idx in 0..codebooks {
+            let mut codes = Vec::with_capacity(batch_size);
+            for batch_idx in 0..batch_size {
+                let audio_token = &audio_tokens_vec[batch_idx];
+                let item = &mut self.batch[batch_idx];
+                codes.push(item.next_token(codebook_idx, audio_token[codebook_idx]));
+            }
+            audio_tokens_tensors.push(Tensor::from_vec(codes, (batch_size, 1), self.device())?);
+        }
+
+        let text = self.text_tokens()?;
+        let audio_tokens_inputs = audio_tokens_tensors.into_iter().map(Some).collect::<Vec<_>>();
+        self.lm.forward_cond(Some(text), audio_tokens_inputs, conditions, mask)
+    }
+
+    pub fn step_tokens_finish(
+        &mut self,
+        forward_out: (Tensor, Tensor),
+        mask: &crate::StreamMask,
+    ) -> Result<Vec<AsrMsg>> {
+        let (text_logits, transformer_out) = forward_out;
+        self.model_step_idx += 1;
+        let mut words = vec![];
+
+        let extra_heads = self.lm.extra_heads(&transformer_out)?;
+        let mut prs = vec![];
+        for head_tensor in extra_heads.iter() {
+            // Only retrieve the first element for each extra-head.
+            let prs_ =
+                candle_nn::ops::softmax_last_dim(&head_tensor.to_dtype(candle::DType::F32)?)?
+                    .i((.., 0, 0))?
+                    .to_vec1::<f32>()?;
+            prs.push(prs_);
+        }
+        if !prs.is_empty() {
+            words.push(AsrMsg::Step { step_idx: self.model_step_idx(), prs });
+        }
+
+        let text_tokens = if self.temperature <= 0.0 {
+            text_logits.i((.., 0))?.argmax(candle::D::Minus1)?
+        } else {
+            candle_nn::sampling::gumbel_softmax(
+                &text_logits.i((.., 0))?.to_dtype(candle::DType::F32)?,
+                self.temperature,
+                candle::D::Minus1,
+            )?
+        };
+        let text_tokens = text_tokens.to_vec1::<u32>()?;
+        for (batch_idx, (text_token, item)) in
+            text_tokens.into_iter().zip(self.batch.iter_mut()).enumerate()
+        {
+            if !mask.is_active(batch_idx) {
+                continue;
+            }
+            item.text_token = text_token;
+            item.step_idx += 1;
+            if item.step_idx >= self.asr_delay_in_tokens {
+                if text_token == 3 || text_token == 0 {
+                    if !item.word_tokens.is_empty() {
+                        let mut tokens = vec![];
+                        std::mem::swap(&mut item.word_tokens, &mut tokens);
+                        words.push(AsrMsg::Word {
+                            tokens,
+                            start_time: item.last_stop_time,
+                            batch_idx,
+                        });
+                        item.unended_word = true;
+                    }
+                } else {
+                    item.word_tokens.push(item.text_token)
+                }
+                if item.text_token == 0 {
+                    let stop_time = (item.step_idx - self.asr_delay_in_tokens) as f64 / 12.5;
+                    if item.unended_word {
+                        item.unended_word = false;
+                        words.push(AsrMsg::EndWord { stop_time, batch_idx });
+                    }
+                    item.last_stop_time = stop_time;
+                }
+            }
+        }
+        Ok(words)
+    }
+
     pub fn step_tokens<F>(
         &mut self,
         audio_tokens: &Tensor,
@@ -164,43 +264,39 @@ impl State {
             candle::bail!("batch size mismatch: {batch_size} != {}", self.batch_size());
         }
         let mut words = vec![];
-        for step in 0..steps {
-            let audio_tokens = audio_tokens.narrow(2, step, 1)?;
-            let audio_tokens = audio_tokens.reshape((batch_size, codebooks))?.to_vec2::<u32>()?;
-            let audio_tokens = (0..codebooks)
-                .map(|codebook_idx| {
-                    let audio_tokens = audio_tokens
-                        .iter()
-                        .zip(self.batch.iter_mut())
-                        .enumerate()
-                        .map(|(batch_idx, (audio_token, item))| {
-                            if !mask.is_active(batch_idx) {
-                                0
-                            } else {
-                                item.next_token(codebook_idx, audio_token[codebook_idx])
-                            }
-                        })
-                        .collect();
-                    let audio_tokens =
-                        Tensor::from_vec(audio_tokens, (batch_size, 1), self.device())?;
-                    Ok(audio_tokens)
-                })
-                .collect::<Result<Vec<_>>>()?;
+        let all_audio_codes = audio_tokens.to_vec3::<u32>()?;
+
+        for step_idx in 0..steps {
+            let mut audio_tokens_tensors = Vec::with_capacity(codebooks);
+            for codebook_idx in 0..codebooks {
+                let mut codes = Vec::with_capacity(batch_size);
+                for batch_idx in 0..batch_size {
+                    let item = &mut self.batch[batch_idx];
+                    codes.push(item.next_token(
+                        codebook_idx,
+                        all_audio_codes[batch_idx][codebook_idx][step_idx],
+                    ));
+                }
+                audio_tokens_tensors.push(Tensor::from_vec(codes, (batch_size, 1), self.device())?);
+            }
+
             let text = self.text_tokens()?;
-            f(self.batch.as_slice(), &text, &audio_tokens);
-            let audio_tokens = audio_tokens.into_iter().map(Some).collect::<Vec<_>>();
+            f(self.batch.as_slice(), &text, &audio_tokens_tensors);
+            let audio_tokens_inputs =
+                audio_tokens_tensors.into_iter().map(Some).collect::<Vec<_>>();
             let (text_logits, transformer_out) =
-                self.lm.forward_cond(Some(text), audio_tokens, conditions, mask)?;
+                self.lm.forward_cond(Some(text), audio_tokens_inputs, conditions, mask)?;
             self.model_step_idx += 1;
+
             let extra_heads = self.lm.extra_heads(&transformer_out)?;
             let mut prs = vec![];
-            for extra_head in extra_heads.iter() {
+            for head_tensor in extra_heads.iter() {
                 // Only retrieve the first element for each extra-head.
-                let prs_ =
-                    candle_nn::ops::softmax_last_dim(&extra_head.to_dtype(candle::DType::F32)?)?
+                let prs_val =
+                    candle_nn::ops::softmax_last_dim(&head_tensor.to_dtype(candle::DType::F32)?)?
                         .i((.., 0, 0))?
                         .to_vec1::<f32>()?;
-                prs.push(prs_);
+                prs.push(prs_val);
             }
             if !prs.is_empty() {
                 words.push(AsrMsg::Step { step_idx: self.model_step_idx(), prs });
@@ -215,13 +311,12 @@ impl State {
                     candle::D::Minus1,
                 )?
             };
-            let text_tokens = text_tokens.to_vec1::<u32>()?;
-            for (batch_idx, (text_token, item)) in
-                text_tokens.into_iter().zip(self.batch.iter_mut()).enumerate()
-            {
+            let text_tokens_vec = text_tokens.to_vec1::<u32>()?;
+            for (batch_idx, text_token) in text_tokens_vec.into_iter().enumerate() {
                 if !mask.is_active(batch_idx) {
                     continue;
                 }
+                let item = &mut self.batch[batch_idx];
                 item.text_token = text_token;
                 item.step_idx += 1;
                 if item.step_idx >= self.asr_delay_in_tokens {

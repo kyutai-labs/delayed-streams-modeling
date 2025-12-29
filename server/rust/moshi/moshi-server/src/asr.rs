@@ -100,11 +100,11 @@ impl Asr {
             lm,
         )?;
         let dev = state.device().clone();
-        let pcm = vec![0f32; FRAME_SIZE * state.batch_size()];
+        let pcm_vec = vec![0f32; FRAME_SIZE * state.batch_size()];
+        let pcm = Tensor::from_vec(pcm_vec, (state.batch_size(), 1, FRAME_SIZE), &dev)?;
         for _ in 0..2 {
-            let pcm = Tensor::new(pcm.as_slice(), &dev)?.reshape((state.batch_size(), 1, ()))?;
             let _asr_msgs =
-                state.step_pcm(pcm, self.conditions.as_ref(), &().into(), |_, _, _| ())?;
+                state.step_pcm(pcm.clone(), self.conditions.as_ref(), &().into(), |_, _, _| ())?;
         }
         Ok(())
     }
@@ -235,15 +235,59 @@ impl Asr {
         let mimi_dev = state.device().clone();
         let mimi_batch_size = state.batch_size();
         let mut mimi_tokenizer = state.audio_tokenizer.clone();
+        #[cfg(feature = "cuda")]
+        let mut pinned_pcm = if let Device::Cuda(cuda_dev) = &mimi_dev {
+            let p = unsafe {
+                cuda_dev
+                    .cuda_stream()
+                    .context()
+                    .alloc_pinned::<f32>(FRAME_SIZE * state.batch_size())
+            }
+            .ok();
+            if let Some(mut p) = p {
+                if let Ok(slice) = p.as_mut_slice() {
+                    slice.fill(0.0);
+                    Some(p)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        #[cfg(not(feature = "cuda"))]
+        let mut pinned_pcm: Option<Vec<f32>> = None;
+
         let mimi_handle = crate::utils::spawn_blocking("mimi_encode_loop", move || {
             for pcm in pcm_rx {
                 let pcm_len = pcm.len();
-                let pcm = Tensor::from_vec(pcm, (1, 1, pcm_len), &mimi_dev)?.broadcast_as((
-                    mimi_batch_size,
-                    1,
-                    pcm_len,
-                ))?;
-                let audio_tokens = mimi_tokenizer.encode_step(&pcm.into(), &().into())?;
+
+                let pcm_tensor = {
+                    #[cfg(feature = "cuda")]
+                    {
+                        match pinned_pcm.as_mut() {
+                            Some(p) => match p.as_mut_slice() {
+                                Ok(slice) => {
+                                    let len = pcm_len.min(slice.len());
+                                    slice[..len].copy_from_slice(&pcm[..len]);
+                                    Tensor::from_slice(&slice[..len], (1, 1, len), &mimi_dev)
+                                }
+                                Err(_) => Tensor::from_vec(pcm, (1, 1, pcm_len), &mimi_dev),
+                            },
+                            None => Tensor::from_vec(pcm, (1, 1, pcm_len), &mimi_dev),
+                        }
+                    }
+                    #[cfg(not(feature = "cuda"))]
+                    {
+                        let _ = &mut pinned_pcm;
+                        Tensor::from_vec(pcm, (1, 1, pcm_len), &mimi_dev)
+                    }
+                }?
+                .broadcast_as((mimi_batch_size, 1, pcm_len))?;
+                let audio_tokens = mimi_tokenizer.encode_step(&pcm_tensor.into(), &().into())?;
                 if let Some(audio_tokens) = audio_tokens.as_option() {
                     let (_one, _codebooks, steps) = audio_tokens.dims3()?;
                     let mut all_steps = Vec::with_capacity(steps);

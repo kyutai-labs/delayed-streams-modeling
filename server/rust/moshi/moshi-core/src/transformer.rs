@@ -879,10 +879,12 @@ impl StreamingTransformer {
         // We will extract at most "context" from the kv_cache.
         // Note that the mask still discards the values that are before context as this can happen
         // when t > context.
-        let mask = {
+        let mut pos = None;
+        let (mask, rope) = if t == 1 {
             let ks = self.layers[0].self_attn.kv_cache.positions(t);
             let min_ks = ks.iter().min().context("no positions, is t == 0?")?;
-            if t == 1 && self.last_reset_pos.iter().all(|v| v <= min_ks) {
+
+            let mask = if self.last_reset_pos.iter().all(|&v| v <= *min_ks) {
                 None
             } else {
                 let dev = xs.device();
@@ -892,10 +894,7 @@ impl StreamingTransformer {
                     dev,
                 )?
                 .to_dtype(DType::F32)?;
-                let t_pos =
-                    Tensor::arange(current_seq_len as u32, (current_seq_len + t) as u32, dev)?
-                        .reshape((1, t, 1))?
-                        .to_dtype(DType::F32)?;
+                let t_pos = current_seq_len as f32;
                 let k_pos = Tensor::from_vec(
                     ks.iter().map(|&v| v as u32).collect::<Vec<_>>(),
                     (1, 1, ks.len()),
@@ -903,13 +902,9 @@ impl StreamingTransformer {
                 )?
                 .to_dtype(DType::F32)?;
 
-                // last_reset_pos <= k_pos
                 let cond1 = k_pos.broadcast_ge(&last_reset_pos)?;
-                // k_pos <= t_pos
-                let cond2 = k_pos.broadcast_le(&t_pos)?;
-                // t_pos <= k_pos + self.context
-                let cond3 = t_pos
-                    .broadcast_le(&k_pos.broadcast_add(&Tensor::new(self.context as f32, dev)?)?)?;
+                let cond2 = k_pos.le(t_pos)?;
+                let cond3 = k_pos.ge(t_pos - self.context as f32)?;
 
                 let mask_bool = cond1.broadcast_as((b, t, ks.len()))?;
                 let mask_bool = mask_bool.where_cond(&cond2, &mask_bool.zeros_like()?)?;
@@ -925,23 +920,74 @@ impl StreamingTransformer {
                     .expand((b, self.num_heads, t, ks.len()))?
                     .to_dtype(xs.dtype())?;
                 Some(mask)
+            };
+
+            let _ks_vec = ks.iter().map(|&v| v as u32).collect::<Vec<_>>();
+            let p = Tensor::from_vec(_ks_vec, (b, 1), xs.device())?;
+            let rope = match self.rope {
+                Some(ref rope) => Some(rope.rope(&p)?),
+                None => None,
+            };
+            if self.positional_embedding == PositionalEmbedding::Sin {
+                pos = Some(p);
             }
-        };
-        // pos is used for the rotary embeddings, as these are relative embeddings there is no need
-        // to adjust them for the actual position using last_reset_pos.
-        let pos =
-            Tensor::arange(current_seq_len as u32, (current_seq_len + t) as u32, xs.device())?;
-        let rope = match self.rope {
-            Some(ref rope) => Some(rope.rope(&pos)?),
-            None => None,
+            (mask, rope)
+        } else {
+            let ks = self.layers[0].self_attn.kv_cache.positions(t);
+            let dev = xs.device();
+            let last_reset_pos = Tensor::from_vec(
+                self.last_reset_pos.iter().map(|&v| v as u32).collect::<Vec<_>>(),
+                (b, 1, 1),
+                dev,
+            )?
+            .to_dtype(DType::F32)?;
+            let t_pos = Tensor::arange(current_seq_len as u32, (current_seq_len + t) as u32, dev)?
+                .reshape((1, t, 1))?
+                .to_dtype(DType::F32)?;
+            let k_pos = Tensor::from_vec(
+                ks.iter().map(|&v| v as u32).collect::<Vec<_>>(),
+                (1, 1, ks.len()),
+                dev,
+            )?
+            .to_dtype(DType::F32)?;
+
+            let cond1 = k_pos.broadcast_ge(&last_reset_pos)?;
+            let cond2 = k_pos.broadcast_le(&t_pos)?;
+            let cond3 = t_pos
+                .broadcast_le(&k_pos.broadcast_add(&Tensor::new(self.context as f32, dev)?)?)?;
+
+            let mask_bool = cond1.broadcast_as((b, t, ks.len()))?;
+            let mask_bool = mask_bool.where_cond(&cond2, &mask_bool.zeros_like()?)?;
+            let mask_bool = mask_bool.where_cond(&cond3, &mask_bool.zeros_like()?)?;
+
+            let neg_inf = Tensor::new(f32::NEG_INFINITY, dev)?.broadcast_as((b, t, ks.len()))?;
+            let zero = Tensor::zeros((b, t, ks.len()), DType::F32, dev)?;
+
+            let mask = mask_bool
+                .where_cond(&zero, &neg_inf)?
+                .unsqueeze(1)?
+                .expand((b, self.num_heads, t, ks.len()))?
+                .to_dtype(xs.dtype())?;
+
+            let p =
+                Tensor::arange(current_seq_len as u32, (current_seq_len + t) as u32, xs.device())?;
+            let rope = match self.rope {
+                Some(ref rope) => Some(rope.rope(&p)?),
+                None => None,
+            };
+            if self.positional_embedding == PositionalEmbedding::Sin {
+                pos = Some(p);
+            }
+            (Some(mask), rope)
         };
         let mut xs = match self.positional_embedding {
             PositionalEmbedding::Rope | PositionalEmbedding::None => xs.clone(),
             PositionalEmbedding::Sin => {
+                let p = pos.context("pos not set")?;
                 let dev = xs.device();
                 let theta = self.max_period as f32;
                 let half_dim = c / 2;
-                let positions = pos.unsqueeze(1)?.to_dtype(DType::F32)?;
+                let positions = p.unsqueeze(1)?.to_dtype(DType::F32)?;
                 let inv_freq: Vec<_> = (0..half_dim)
                     .map(|i| 1f32 / theta.powf(i as f32 / (half_dim - 1) as f32))
                     .collect();

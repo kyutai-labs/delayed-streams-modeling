@@ -43,6 +43,23 @@ delayed-streams-modeling/
 └── audio/               # Sample audio files
 ```
 
+## CUDA 13.1 build shim
+
+If you are using CUDA 13.1, `cudarc` only recognizes toolkits up to 12.9. Use the shim below to spoof the version and set CUDA paths for local builds:
+
+```bash
+source ops/setup_env.sh
+cargo check -p moshi-server --features cuda
+```
+
+For convenience:
+
+```bash
+ops/check_cuda.sh
+```
+
+`ops/run-moshi-server.sh` will source the shim automatically when it detects CUDA 13.1.
+
 ## Kyutai Speech-To-Text
 
 <a href="https://huggingface.co/collections/kyutai/speech-to-text-685403682cf8a23ab9466886" target="_blank" style="margin: 2px;">

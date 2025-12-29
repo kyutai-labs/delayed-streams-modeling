@@ -2,6 +2,21 @@
 
 `moshi-server` is the server implementation for the Moshi voice AI.
 
+## CUDA build (shim for CUDA 13.1)
+
+The current `cudarc` dependency only recognizes CUDA toolkit versions up to 12.9, so the project uses a small shim to build against CUDA 13.1. Source the setup script to add the correct paths and spoof the version during builds:
+
+```bash
+source ops/setup_env.sh
+cargo check -p moshi-server --features cuda
+```
+
+You can also use the convenience script:
+
+```bash
+ops/check_cuda.sh
+```
+
 ## SSL/TLS (Reverse Proxy)
 
 This server runs on plain HTTP. For production deployments with HTTPS/WSS, use a reverse proxy like [Caddy](https://caddyserver.com/) or nginx to handle SSL termination.

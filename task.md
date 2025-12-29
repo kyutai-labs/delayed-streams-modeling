@@ -9,7 +9,9 @@ Optimize the Moshi Rust implementation (core and server) to reduce latency, incr
   - #100: Infrastructure & Startup Optimizations (Done)
   - #101: Inference Hot Path Optimizations (Done)
   - #103: Pipeline & Transfer Optimizations (Done)
-  - #104: Overlap Mimi and LM in ASR (In Progress)
+  - #104: Overlap Mimi and LM in ASR (Done)
+  - #105: CUDA Graph Integration for ASR (Deferred)
+  - #106: Pinned Memory for PCM Buffers (Done)
 
 ## Completed Tasks
 - [x] Parallelize module loading in `moshi-server` (#100)
@@ -21,8 +23,12 @@ Optimize the Moshi Rust implementation (core and server) to reduce latency, incr
 - [x] Refine release profile for maximum performance (#100)
 - [x] Increase TTS audio processing channel capacity (#103)
 - [x] Create GitHub Master and Sub-Issues (#99)
+- [x] Implement 3-stage pipeline (Encoder -> Inference -> Post-process) in `asr.rs` and `batched_asr.rs` (#104)
+- [x] Use pinned memory for PCM buffers (#106)
+- [x] Address `sentencepiece` system dependency in build environment
 
 ## In-Progress Tasks
-- [ ] Implement Mimi encoding/decoding overlapping with LM inference (ASR) (#104)
-- [ ] Verify optimizations with benchmarks and tests
-- [ ] Create Pull Request and merge to `main`
+- [ ] Final verification on GPU hardware (#104)
+
+## Deferred Tasks
+- [ ] Implement CUDA Graph Integration for ASR (#105) - Pending Candle native support.
