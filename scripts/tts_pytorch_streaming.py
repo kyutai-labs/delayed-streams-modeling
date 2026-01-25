@@ -217,12 +217,15 @@ def main():
 
         gen = TTSGen(tts_model, [condition_attributes], on_frame=_on_frame)
 
-        with sd.OutputStream(
-            samplerate=tts_model.mimi.sample_rate,
-            blocksize=1920,
-            channels=1,
-            callback=audio_callback,
-        ) and tts_model.mimi.streaming(1):
+        with (
+            sd.OutputStream(
+                samplerate=tts_model.mimi.sample_rate,
+                blocksize=1920,
+                channels=1,
+                callback=audio_callback,
+            ),
+            tts_model.mimi.streaming(1),
+        ):
             first_turn = True
             for line in sys.stdin:
                 entries = prepare_script(tts_model, line.strip(), first_turn=first_turn)
