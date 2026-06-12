@@ -113,6 +113,18 @@ class TTSGen:
         )
         self.lm_gen.streaming_forever(1)
 
+        # While offset < delay_steps the audio tokens are force-zeroed by
+        # _on_audio_hook anyway, so the depformer pass can be skipped
+        # entirely for those steps (same optimization as
+        # TTSModel.generate). Skipping it roughly halves
+        # time-to-first-audio.
+        self._no_dep_tokens = torch.full(
+            (1, tts_model.lm.dep_q, 1),
+            tts_model.machine.token_ids.zero,
+            dtype=torch.long,
+            device=tts_model.lm.device,
+        )
+
     def process_last(self):
         while len(self.state.entries) > 0 or self.state.end_step is not None:
             self._step()
@@ -134,7 +146,12 @@ class TTSGen:
             dtype=torch.long,
             device=self.tts_model.lm.device,
         )
-        frame = self.lm_gen.step(input_tokens)
+        depformer_replace_tokens = None
+        if self.offset < self.tts_model.delay_steps:
+            depformer_replace_tokens = self._no_dep_tokens
+        frame = self.lm_gen.step(
+            input_tokens, depformer_replace_tokens=depformer_replace_tokens
+        )
         self.offset += 1
         if frame is not None:
             if self.on_frame is not None:
